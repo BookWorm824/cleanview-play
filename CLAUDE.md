@@ -18,7 +18,7 @@ touch", then "keeping clean view as a save program only add a play now feature f
   `git fetch original` and `git merge <commit>` (or cherry-pick), then fix what the merge
   touches here. Copy from commits, not from its working copy. Brought in so far: 1.18.90
   (e2d32b6, the start), 1.18.91 (b54b7c7, 2026-11-14; its tests/support.py hiding
-  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her"), 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words), 1.18.98 (12c0363, 2026-11-14, "Al" isn't "hell", two Aladdin lessons for kids) and 1.18.99 (2c0abe6, 2026-11-14, the green bar follows real time, loud music turned down to a tenth). Keep changes to shared files
+  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her"), 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words), 1.18.98 (12c0363, 2026-11-14, "Al" isn't "hell", two Aladdin lessons for kids), 1.18.99 (2c0abe6, 2026-11-14, the green bar follows real time, loud music turned down to a tenth) and 1.18.100 (5d8abb1, 2026-11-14, the chosen files' line bigger and bolder). Keep changes to shared files
   small so merges stay easy; Play's own code goes in its own files.
 - Its own program: `%LOCALAPPDATA%\CleanView Play` (APP_DATA in every module), the lock
   `Local\CleanView-Play-open`, `CleanView Play.exe` / `CleanView Play-work.exe`, the
@@ -566,6 +566,11 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   episodes, from scratch): 2 at once 14.7 min, one after the other 19.2 min, the same closer
   looks; each video is slower at once (13-15 min against 9-10) but both are done sooner, so
   the default of 2 stays.
+- The videos chosen are shown bigger (1.18.100, 2026-11-14; the owner: "in the choose file
+  area, after choosing a file the name of the file chosen goes in the area, can the text be a
+  couple sizes bigger and bolder a little"): step 1's line under "Choose files…" (how many,
+  how long, the folder and the first name) is `CHOSEN_FONT`, Segoe UI Semibold 12, once videos
+  are chosen; "Nothing chosen yet" stays plain 10.
 - Loud music is turned down more (1.18.99, 2026-11-14; the owner: "on the reducing loud music -
   that needs to come down more"): `MUSIC_LEVEL` 0.1, a tenth of its volume (20 dB quieter),
   was 0.25 (12 dB); the review page's music card says "a tenth".
@@ -1764,6 +1769,7 @@ Run from the repo folder with the app's own Python (it has the packages the app 
   `CLEANVIEW_TEST_MULTI`.
 - `test_save_fails.py` (NoRoom): a save that fails on a full drive says where, how much is
   free and what to do, and isn't offered for sending; an unexpected failure still is.
+- `test_chosen_bigger.py`: the chosen videos' line in Semibold 12, "Nothing chosen yet" as before.
 - `test_progress_bar.py`: the slow steps get most of the bar (her laptop's figures: the
   picture done at about a quarter, the reading about half), in order and full, this PC's own
   speeds winning, saved work a sliver, every step that runs showing, laid out again from where
