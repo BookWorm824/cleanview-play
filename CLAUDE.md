@@ -140,6 +140,17 @@ touch", then "keeping clean view as a save program only add a play now feature f
   checked by fingerprint) → `watch_files([path], clean=True)` (no question); not found → "Is its
   drive plugged in? Find it yourself?" → a file picker, checked by fingerprint ("That's a
   different video, or a different version of it").
+- Year-old scan leftovers cleared, logs kept (1.0.12; the owner asked about "an expiry on the
+  log so it doesn't fill up? like a year", then yes to keeping logs forever and clearing only
+  leftovers of videos not played or opened in a year; earlier: "we should keep the full log
+  now"). `cvplay.tidy_leftovers` (365 days, `App._tidy_leftovers` 30 s after start, once a day:
+  `tidied_leftovers.txt`) keeps `analysis.json` and `thumbs\` and clears the rest (sheets,
+  previews, transcript, sounds, speakers...; a second scan redoes what's missing; the review
+  page copes with missing thumbs). Last used = the list's `used` (set by `remember`,
+  `mark_used` from `_write_session` and from playing one found by `cleaned_before`, which now
+  sets `st["_view"]`), else analysis.json's mtime. Never: the open review's views, the
+  session's ("Pick up where I left off"), or one with `queue.lock`. `find_again` checks only
+  drive letters that are fixed or removable (`drive_letters`: network drives can hang).
 - The review page: "▶ Play now" instead of "Save clean copy"; the save folder / size row
   is gone; the review stays open (change a tick, play again) and is saved for "Pick up
   where I left off". `_gather_choices()` is the old first half of `_save_from_review()`.

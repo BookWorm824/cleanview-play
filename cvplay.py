@@ -217,15 +217,91 @@ def remember(st, view, folder=None, fp=None):
         return None
     with _index_lock:
         idx = load_index(folder)
+        old = idx.get(fp) or {}
         idx[fp] = {"view": str(view), "title": Path(path).stem, "path": str(path),
-                   "size": os.path.getsize(path), "when": time.strftime("%Y-%m-%d %H:%M"),
-                   "show": st.get("show") or ""}
+                   "size": os.path.getsize(path),
+                   "when": old.get("when") or time.strftime("%Y-%m-%d %H:%M"),
+                   "show": st.get("show") or "", "used": time.time()}
         _save_index(idx, folder)
     return fp
 
 
 def known_views(folder=None):
     return {e.get("view") for e in load_index(folder).values()}
+
+
+def mark_used(views_used, folder=None):
+    """These videos (by their views/<view> name) were just played or opened."""
+    views_used = {str(v) for v in views_used}
+    with _index_lock:
+        idx = load_index(folder)
+        hit = False
+        for e in idx.values():
+            if e.get("view") in views_used:
+                e["used"] = time.time()
+                hit = True
+        if hit:
+            _save_index(idx, folder)
+
+
+# ---------- clearing a year-old scan's leftovers (1.0.12) ----------
+# The owner, 2026-11-14: "do you think we should add an expiry on the log so it doesn't fill
+# up? like a year", then yes to keeping the logs for good and clearing only the rest. A log
+# (analysis.json, ~0.4 MB) is all playing clean needs; the scan leaves ~13 MB more beside it
+# (picture sheets, preview clips, the transcript, sound and speaker data) that only a second
+# scan of the same video would reuse (it redoes whatever is missing). Kept: the log and the
+# scene thumbnails (small; the review page shows them, and copes without them).
+TIDY_DAYS = 365
+KEEP = {"analysis.json", "thumbs"}
+TIDIED = "tidied.txt"
+
+
+def last_used(folder, entry=None):
+    """When this video was last played or opened: the list's note, else when its log was
+    last written."""
+    if entry and entry.get("used"):
+        return entry["used"]
+    try:
+        return (Path(folder) / "analysis.json").stat().st_mtime
+    except OSError:
+        return time.time()
+
+
+def tidy_leftovers(views=None, days=TIDY_DAYS, keep_views=(), now=None):
+    """Clear the scan leftovers of each video not played or opened for `days`, keeping its log
+    (so it still plays clean) and thumbnails. Never one in `keep_views` (the review that's
+    open, or "Pick up where I left off"), nor one being checked now. Returns the bytes freed."""
+    views = Path(views or APP_DATA / "views")
+    now = now or time.time()
+    by_view = {e.get("view"): e for e in load_index(views.parent).values()}
+    keep_views = {str(v) for v in keep_views}
+    freed = 0
+    for folder in sorted(p for p in views.iterdir() if p.is_dir()) if views.is_dir() else ():
+        if folder.name in keep_views or not (folder / "analysis.json").exists() \
+                or (folder / "queue.lock").exists():
+            continue
+        if not [i for i in folder.iterdir() if i.name not in KEEP | {TIDIED}]:
+            continue                    # nothing left to clear (scanned again: there is)
+        if now - last_used(folder, by_view.get(folder.name)) < days * 86400:
+            continue
+        for item in folder.iterdir():
+            if item.name in KEEP:
+                continue
+            try:
+                if item.is_dir():
+                    size = sum(f.stat().st_size for f in item.rglob("*") if f.is_file())
+                    shutil.rmtree(item)
+                else:
+                    size = item.stat().st_size
+                    item.unlink()
+                freed += size
+            except OSError:
+                continue
+        try:
+            (folder / TIDIED).write_text(time.strftime("%Y-%m-%d"), encoding="utf8")
+        except OSError:
+            pass
+    return freed
 
 
 def index_views(views=None):
@@ -252,14 +328,29 @@ def cleaned_list(folder=None):
     return sorted(items, key=lambda e: e.get("when", ""), reverse=True)
 
 
+def drive_letters():
+    """The drive letters there now that are this PC's own disks or plugged-in drives (not
+    network drives, which can take many seconds to answer, nor CD/DVD drives)."""
+    import string
+    if os.name != "nt":
+        return []
+    try:
+        import ctypes
+        k = ctypes.windll.kernel32
+        mask = k.GetLogicalDrives()
+        return [d for i, d in enumerate(string.ascii_uppercase)
+                if mask >> i & 1 and k.GetDriveTypeW(f"{d}:\\") in (2, 3)]   # removable, fixed
+    except Exception:
+        return []
+
+
 def find_again(item):
     """Where a listed video is now: where it was, or the same place on another drive letter
     (an external drive's letter can change), checked by its fingerprint. None if not found."""
-    import string
     was = str(item.get("path") or "")
     places = [was]
     if len(was) > 2 and was[1] == ":":
-        places += [f"{d}:{was[2:]}" for d in string.ascii_uppercase if d != was[0].upper()]
+        places += [f"{d}:{was[2:]}" for d in drive_letters() if d != was[0].upper()]
     for p in places:
         try:
             if os.path.isfile(p) and os.path.getsize(p) == item.get("size") \
@@ -277,6 +368,7 @@ def _load_log(views, view, path):
         return None
     if st.get("path") and st.get("duration"):
         st["path"] = str(path)
+        st["_view"] = str(view)         # which log it is (not saved)
         return st
     return None
 

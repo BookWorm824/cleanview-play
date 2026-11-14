@@ -776,6 +776,9 @@ class CleanedBefore(unittest.TestCase):
             if w is not None and w.winfo_exists():
                 (w.finish if name == "watching" else w.destroy)()
         self.app.update()
+        for t in threading.enumerate():     # a review saved puts its video on the list a
+            if t.name == "remember cleaned":    # moment later: done before the list is cleared
+                t.join(5)
 
     def scanned(self, path):
         """As a scan and review leave it: the log in views/<key>, on the list."""
@@ -861,6 +864,9 @@ class CleanedBefore(unittest.TestCase):
             tree = next(c for c in win.winfo_children()[2].winfo_children()
                         if isinstance(c, ui.ttk.Treeview))
             self.assertEqual(tree.item("0")["values"][0], "Castle S02E06")
+            row = next(i for i in tree.get_children()
+                       if tree.item(i)["values"][0] == "Castle S02E06")
+            tree.selection_set(row)
             tree.event_generate("<Return>")
             for _ in range(200):
                 self.app.update()
@@ -883,6 +889,9 @@ class CleanedBefore(unittest.TestCase):
             self.app.update()
             tree = next(c for c in win.winfo_children()[2].winfo_children()
                         if isinstance(c, ui.ttk.Treeview))
+            row = next(i for i in tree.get_children()
+                       if tree.item(i)["values"][0] == "Castle S02E06")
+            tree.selection_set(row)
             tree.event_generate("<Return>")
             for _ in range(200):
                 self.app.update()
@@ -891,6 +900,30 @@ class CleanedBefore(unittest.TestCase):
                 self.app.after(10)
         self.assertIn("Can't find \u201cCastle S02E06\u201d where it was", said[0])
         watch.assert_not_called()
+
+    def test_leftovers_looked_at_once_a_day_never_the_open_review(self):
+        support.write_review()
+        self.assertTrue(self.app._resume())
+        self.app.update()
+        note = support.APP_DATA / self.app.TIDY_NOTE
+        note.unlink(missing_ok=True)
+        self.addCleanup(note.unlink, True)
+        calls = []
+
+        def tidy(views=None, days=365, keep_views=(), now=None):
+            calls.append(set(keep_views))
+            return 5_000_000
+        with mock.patch.object(ui.cvplay, "tidy_leftovers", tidy):
+            self.app._tidy_leftovers()
+            for _ in range(100):
+                if note.exists():
+                    break
+                time.sleep(0.02)
+            self.app._tidy_leftovers()                  # again today: not again
+            time.sleep(0.2)
+        self.assertEqual(len(calls), 1)
+        self.assertIn(Path(self.app.jobs[0]["work"]).name, calls[0])
+        self.assertIn("Cleared 5 MB", note.read_text(encoding="utf8"))
 
     def test_nothing_cleaned_yet(self):
         said = []
@@ -917,6 +950,91 @@ class CleanedBefore(unittest.TestCase):
                 self.app.after(10)
         self.assertEqual(asked, [])
         self.assertEqual(played[0][0]["skips"], [[30.0, 38.0]])
+
+
+class YearOldLeftovers(unittest.TestCase):
+    """1.0.12 (the owner, 2026-11-14: "do you think we should add an expiry on the log so it
+    doesn't fill up? like a year", then yes to keeping the logs for good and clearing only the
+    scan leftovers of videos not played or opened in a year)."""
+    DAY = 86400
+
+    def setUp(self):
+        self.views = support.APP_DATA / "views"
+        shutil.rmtree(self.views, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, self.views, True)
+        self.addCleanup(lambda: (support.APP_DATA / cvplay.INDEX_NAME).unlink(missing_ok=True))
+        self.dir = Path(tempfile.mkdtemp(prefix="cv-tidy-", dir=support.SANDBOX))
+        self.addCleanup(shutil.rmtree, self.dir, True)
+
+    def scanned(self, name, used_days_ago=None):
+        """A scanned video's folder, as a scan leaves it."""
+        video = self.dir / f"{name}.mkv"
+        video.write_bytes(os.urandom(50_000))
+        st = st_with(path=str(video), duration=100.0)
+        view = self.views / name
+        (view / "thumbs").mkdir(parents=True)
+        (view / "sheets").mkdir()
+        (view / "analysis.json").write_text(json.dumps(st), encoding="utf8")
+        (view / "thumbs" / "s1.png").write_bytes(b"p" * 100)
+        (view / "sheets" / "sheet_1.jpg").write_bytes(b"j" * 5000)
+        (view / "transcript.json").write_text("{}" + " " * 3000)
+        (view / "preview_30_38.mkv").write_bytes(b"v" * 4000)
+        if used_days_ago is not None:
+            cvplay.remember(st, name, support.APP_DATA)
+            idx = cvplay.load_index(support.APP_DATA)
+            for e in idx.values():
+                if e["view"] == name:
+                    e["used"] = time.time() - used_days_ago * self.DAY
+            cvplay._save_index(idx, support.APP_DATA)
+        return video, view
+
+    def left(self, view):
+        return sorted(p.name for p in view.iterdir())
+
+    def test_a_year_unused_keeps_only_the_log(self):
+        video, view = self.scanned("old", used_days_ago=400)
+        freed = cvplay.tidy_leftovers(self.views)
+        self.assertGreaterEqual(freed, 12000)
+        self.assertEqual(self.left(view), ["analysis.json", "thumbs", "tidied.txt"])
+        self.assertTrue((view / "thumbs" / "s1.png").exists())
+        st = cvplay.cleaned_before(str(video), self.views)          # still plays clean
+        self.assertEqual(cvplay.clean_entry(st)["skips"], [[30.0, 38.0]])
+        self.assertEqual(cvplay.tidy_leftovers(self.views), 0, "nothing more to clear")
+
+    def test_played_or_opened_within_the_year_is_left_alone(self):
+        _, view = self.scanned("recent", used_days_ago=300)
+        self.assertEqual(cvplay.tidy_leftovers(self.views), 0)
+        self.assertIn("sheets", self.left(view))
+
+    def test_the_open_review_and_one_being_checked_are_left_alone(self):
+        _, kept = self.scanned("open review", used_days_ago=400)
+        _, busy = self.scanned("being checked", used_days_ago=400)
+        (busy / "queue.lock").write_text("")
+        self.assertEqual(cvplay.tidy_leftovers(self.views, keep_views={"open review"}), 0)
+        self.assertIn("sheets", self.left(kept))
+        self.assertIn("sheets", self.left(busy))
+
+    def test_not_on_the_list_goes_by_when_its_log_was_written(self):
+        _, view = self.scanned("unlisted")
+        old = time.time() - 400 * self.DAY
+        os.utime(view / "analysis.json", (old, old))
+        self.assertGreater(cvplay.tidy_leftovers(self.views), 0)
+        self.assertEqual(self.left(view), ["analysis.json", "thumbs", "tidied.txt"])
+
+    def test_scanned_again_later_can_be_cleared_again(self):
+        _, view = self.scanned("again", used_days_ago=400)
+        cvplay.tidy_leftovers(self.views)
+        (view / "transcript.json").write_text("{}")             # a second scan, long ago
+        self.assertGreater(cvplay.tidy_leftovers(self.views), 0)
+
+    def test_playing_counts_as_used(self):
+        video, view = self.scanned("watched", used_days_ago=400)
+        cvplay.mark_used(["watched"], support.APP_DATA)
+        self.assertEqual(cvplay.tidy_leftovers(self.views), 0)
+
+    def test_found_through_the_list_says_which_log(self):
+        video, view = self.scanned("which", used_days_ago=1)
+        self.assertEqual(cvplay.cleaned_before(str(video), self.views)["_view"], "which")
 
 
 class OpenWith(unittest.TestCase):

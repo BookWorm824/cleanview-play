@@ -768,6 +768,8 @@ class App(tk.Tk):
         self._offer_id = self.after(2500, self._offer_problem_note)
         self._open_these_id = self.after(300, self._check_open_these)
         threading.Thread(target=open_with.register, daemon=True, name="open with").start()
+        # a year-old scan's leftovers cleared, its log kept (1.0.12), once a day at most
+        self._tidy_id = self.after(30000, self._tidy_leftovers)
         # videos cleaned before 1.0.11 go on the Cleaned before list too (those it can read now)
         threading.Thread(target=lambda: cvplay.index_views(APP_DATA / "views"), daemon=True,
                          name="list cleaned").start()
@@ -866,6 +868,10 @@ class App(tk.Tk):
             except (OSError, RuntimeError, ValueError):
                 pass
         self._remember_cleaned(good)
+        try:                            # played or opened now: not a year-old scan (1.0.12)
+            cvplay.mark_used([Path(j["work"]).name for j in good], APP_DATA)
+        except Exception:
+            pass
         try:
             APP_DATA.mkdir(parents=True, exist_ok=True)
             self.SESSION.write_text(json.dumps(sess, indent=1), encoding="utf8")
@@ -2756,7 +2762,8 @@ class App(tk.Tk):
 
     def destroy(self):
         self._gone = True            # stops the watcher, and the crash log is closed
-        for name in ("_offer_id", "_beat_id", "_poll_id", "_play_beat_id", "_open_these_id"):
+        for name in ("_offer_id", "_beat_id", "_poll_id", "_play_beat_id", "_open_these_id",
+                     "_tidy_id"):
             try:
                 self.after_cancel(getattr(self, name))
             except Exception:
@@ -4419,6 +4426,10 @@ class App(tk.Tk):
                 if st:
                     before[x] = st
             try:
+                cvplay.mark_used([st.get("_view") for st in before.values()], APP_DATA)
+            except Exception:
+                pass
+            try:
                 exe = cvplay.player() or cvplay.get_player()
             except Exception as ex:
                 tb = traceback.format_exc()
@@ -4445,6 +4456,39 @@ class App(tk.Tk):
                 except Exception:
                     pass
         threading.Thread(target=go, daemon=True, name="remember cleaned").start()
+
+    TIDY_NOTE = "tidied_leftovers.txt"     # the day the leftovers were last looked at
+
+    def _tidy_leftovers(self):
+        """Clear the scan leftovers of videos not played or opened for a year, keeping each
+        one's log so it still plays clean (the owner, 2026-11-14: yes to "keep the logs
+        forever" and "clear only the scan leftovers ... for videos that haven't been played
+        or opened in a year"). Quietly, in the background, once a day at most; never the
+        review that's open or the one "Pick up where I left off" opens."""
+        note = APP_DATA / self.TIDY_NOTE
+        today = time.strftime("%Y-%m-%d")
+        try:
+            if note.read_text(encoding="utf8").splitlines()[0].strip() == today:
+                return
+        except OSError:
+            pass
+        keep = {Path(j["work"]).name for j in self.jobs if j.get("work")}
+        try:
+            sess = json.loads(self.SESSION.read_text(encoding="utf8"))
+            keep |= {Path(j["work"]).name for j in sess.get("jobs", [])}
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+
+        def go():
+            try:
+                freed = cvplay.tidy_leftovers(APP_DATA / "views", keep_views=keep)
+                APP_DATA.mkdir(parents=True, exist_ok=True)
+                note.write_text("\n".join([today, f"Cleared {freed / 1e6:.0f} MB of year-old "
+                                           "scan leftovers; the logs are kept.", ""]),
+                                encoding="utf8")
+            except Exception:
+                pass
+        threading.Thread(target=go, daemon=True, name="tidy leftovers").start()
 
     def show_cleaned(self):
         """Every video cleaned here, newest first; pick one and it plays clean with what was
