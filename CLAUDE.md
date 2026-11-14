@@ -23,7 +23,12 @@ touch", then "keeping clean view as a save program only add a play now feature f
 - Its own program: `%LOCALAPPDATA%\CleanView Play` (APP_DATA in every module), the lock
   `Local\CleanView-Play-open`, `CleanView Play.exe` / `CleanView Play-work.exe`, the
   shortcut "CleanView Play", updates from `BookWorm824/cleanview-play` (`update.json`;
-  that GitHub repo doesn't exist yet: create it only with the owner's yes).
+  public, made 2026-11-14 with her yes; installed copies read it without signing in).
+  Releasing: bump `version` (and `based_on` after a merge), commit as `BookWorm824
+  <morganscorner93@gmail.com>`, `git push origin main` (never to `original`). The installer
+  zip (`CleanView Play-Setup.zip`, the `installer/` files plus an `app/` folder of the files
+  in `version.json`) is made by hand for new installs. There's no `gh` on this PC; the repo
+  was made through GitHub's API with git's saved sign-in.
 - `version.json` has its own `version` (1.0.0 onwards) and `based_on`, the CleanView
   version its finding comes from; bump `based_on` when merging a CleanView release.
   `engine.app_version()` says "Play 1.0.0 / 1.18.90", so reports sent to the shared inbox
