@@ -305,9 +305,10 @@ class OnTheReviewPage(unittest.TestCase):
                 mock.patch.object(ui.cvplay, "play", play), \
                 mock.patch.object(ui.cvplay, "Remote", FakeRemote):
             self.app._play_from_review()
-            for _ in range(200):
+            for _ in range(300):
                 self.app.update()
-                if played and getattr(self.app, "watching", None) is not None:
+                w = getattr(self.app, "watching", None)
+                if played and w is not None and w.remote is not None:
                     break
                 self.app.after(10)
         return played
@@ -472,6 +473,73 @@ class OnTheReviewPage(unittest.TestCase):
         with mock.patch.object(ui.cvplay, "entry", entry),                 mock.patch.object(self.app, "_write_session", write):
             self.press_play()
         self.assertEqual(sorted(set(where)), [("entry", False), ("save", False)])
+
+    def test_the_files_are_checked_and_the_player_started_in_the_background(self):
+        # 1.0.6: still "not responding" for several seconds; a sleeping drive can take that
+        # long just to say a file is there
+        where = []
+
+        def play(entries, exe=None, wid=None, extra=()):
+            where.append(threading.current_thread() is threading.main_thread())
+            return FakeProc()
+        with mock.patch.object(ui.cvplay, "player", lambda: Path("mpv.exe")), \
+                mock.patch.object(ui.cvplay, "play", play), \
+                mock.patch.object(ui.cvplay, "Remote", FakeRemote):
+            self.app._play_from_review()
+            for _ in range(300):
+                self.app.update()
+                w = getattr(self.app, "watching", None)
+                if w is not None and w.remote is not None:
+                    break
+                self.app.after(10)
+        self.assertEqual(where, [False])
+
+    def test_stop_before_the_player_is_there(self):
+        # Stop pressed while it's still starting: the player that turns up is closed
+        gate, made = threading.Event(), []
+
+        def play(entries, exe=None, wid=None, extra=()):
+            gate.wait(5)
+            made.append(FakeProc())
+            return made[-1]
+        with mock.patch.object(ui.cvplay, "player", lambda: Path("mpv.exe")), \
+                mock.patch.object(ui.cvplay, "play", play), \
+                mock.patch.object(ui.cvplay, "Remote", FakeRemote):
+            self.app._play_from_review()
+            for _ in range(300):
+                self.app.update()
+                if getattr(self.app, "watching", None) is not None:
+                    break
+                self.app.after(10)
+            self.app.watching._do("stop")
+            self.assertIsNone(self.app.watching)
+            gate.set()
+            for _ in range(100):
+                self.app.update()
+                self.app.after(10)
+        self.assertEqual(len(made), 1)
+        self.assertEqual(self.app.play_lbl.cget("text"), ui.PLAY_SAID)
+
+    def test_a_short_freeze_after_play_now_is_written_down(self):
+        # the window held up for 4 seconds just after Play now: where it was stuck is kept for
+        # the problem note offered next time
+        support.APP_DATA.mkdir(parents=True, exist_ok=True)
+        note = ui.PROBLEM_NOTE
+        note.unlink(missing_ok=True)
+        self.addCleanup(note.unlink, True)
+        with mock.patch.object(ui.App, "PLAY_FREEZE", 0.5):
+            self.press_play()
+            time.sleep(1.2)                 # the window doesn't answer for a while
+            for _ in range(100):
+                self.app.update()
+                if note.exists():
+                    break
+                time.sleep(0.02)
+        text = note.read_text(encoding="utf8")
+        self.assertIn("after Play now (1 video)", text)
+        self.assertIn("stopped answering for about", text)
+        self.assertIn("--- MainThread ---", text)
+        self.assertIn("test_a_short_freeze_after_play_now_is_written_down", text)  # where
 
     def test_subtitles_button(self):
         self.press_play()
@@ -739,6 +807,8 @@ class RealPlayer(unittest.TestCase):
         from ctypes import wintypes
 
         class Win(tk.Tk):
+            q = queue.Queue()               # what the player start sends back (App._poll)
+
             def _px(self, n):
                 return n
         try:
@@ -762,6 +832,8 @@ class RealPlayer(unittest.TestCase):
         def pump(test, secs=15.0):
             stop = time.monotonic() + secs
             while time.monotonic() < stop:
+                while not root.q.empty():
+                    root.q.get()[1]()
                 root.update()
                 if test():
                     return True

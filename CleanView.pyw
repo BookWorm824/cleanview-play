@@ -532,12 +532,41 @@ class Watching(tk.Frame):
             self.hold = (frac, time.monotonic() + 0.8)
 
     # ---------- playing ----------
-    def start(self, exe):
-        """Start the player inside the picture area."""
+    def start(self, exe, on_error=None):
+        """Start the player inside the picture area. Checking the files are there (a sleeping
+        drive can take seconds to wake) and starting the player are done in the background
+        (1.0.6: still "not responding" for several seconds when it opened); on_error(ex, tb)
+        is called back here if it can't start."""
         self.update_idletasks()
-        self.proc = cvplay.play(self.entries, exe, wid=self.video.winfo_id(), extra=self.extra)
-        self.remote = cvplay.Remote(self.proc.pipe, self.proc)
+        wid = self.video.winfo_id()
+        self.started = time.monotonic()
+        self.picture_after = None       # seconds from Play now to the picture (problem notes)
+
+        def go():
+            try:
+                proc = cvplay.play(self.entries, exe, wid=wid, extra=self.extra)
+                remote = cvplay.Remote(proc.pipe, proc)
+            except Exception as ex:
+                tb = traceback.format_exc()
+                self.app.q.put(("call", lambda ex=ex: self._not_started(ex, tb, on_error)))
+                return
+            self.app.q.put(("call", lambda: self._attach(proc, remote)))
+        threading.Thread(target=go, daemon=True, name="player start").start()
+
+    def _attach(self, proc, remote):
+        if self.closing or not self.winfo_exists():     # Stop was pressed meanwhile
+            remote.proc = proc
+            threading.Thread(target=remote.close, daemon=True, name="player close").start()
+            return
+        self.proc, self.remote = proc, remote
         self._tick_id = self.after(150, self._tick)
+
+    def _not_started(self, ex, tb, on_error):
+        if self.closing:
+            return
+        self.finish()
+        if on_error is not None:
+            on_error(ex, tb)
 
     def _state(self):
         return self.remote.state if self.remote is not None else {}
@@ -607,8 +636,9 @@ class Watching(tk.Frame):
                 return
         st = self._state()
         v, t = self._now()
-        if t is not None:
+        if t is not None and not self.played:
             self.played = True
+            self.picture_after = round(time.monotonic() - self.started, 1)
         total = cvplay.watch_length(v, st.get("duration"))
         frac = cvplay.watched(v["skips"], t or 0) / total if total else 0.0
         held, until = self.hold
@@ -2681,7 +2711,7 @@ class App(tk.Tk):
 
     def destroy(self):
         self._gone = True            # stops the watcher, and the crash log is closed
-        for name in ("_offer_id", "_beat_id", "_poll_id"):
+        for name in ("_offer_id", "_beat_id", "_poll_id", "_play_beat_id"):
             try:
                 self.after_cancel(getattr(self, name))
             except Exception:
@@ -4157,7 +4187,7 @@ class App(tk.Tk):
                 old.finish()
             self.watching = Watching(self, entries, done)
             try:
-                self.watching.start(exe)
+                self.watching.start(exe, on_error=failed)
                 say(PLAYING_SAID)
             except Exception as ex:
                 self.watching.finish()
@@ -4198,6 +4228,55 @@ class App(tk.Tk):
                 self.q.put(("call", lambda ex=ex: failed(ex, tb)))
         say("Getting it ready to play…")
         threading.Thread(target=go, daemon=True, name="play now").start()
+        self._watch_play_freeze(len(picks))
+
+    PLAY_FREEZE = 3.0       # seconds without an answer worth writing down after Play now
+
+    def _watch_play_freeze(self, videos, secs=90):
+        """For a minute and a half after Play now: if the window stops answering for more
+        than PLAY_FREEZE seconds, write down where it was stuck (what each part was doing,
+        and what the player said), for the problem note offered next time (1.0.6; the owner:
+        "still freezes for several second when you go to play it says not responding",
+        which never happened here). The usual watcher only notes freezes of 20 seconds."""
+        pressed = time.monotonic()
+        beats = {"at": pressed}
+        try:
+            self.after_cancel(self._play_beat_id)       # Play now pressed again
+        except (AttributeError, ValueError, tk.TclError):
+            pass
+
+        def beat():                     # a beat from the window every quarter second
+            beats["at"] = time.monotonic()
+            if time.monotonic() - pressed < secs and not getattr(self, "_gone", False):
+                self._play_beat_id = self.after(250, beat)
+        beat()
+
+        def watch():
+            stuck, seen = None, None
+            while time.monotonic() - pressed < secs + 5 and not getattr(self, "_gone", False):
+                time.sleep(0.25)
+                now = time.monotonic()
+                if stuck is None and now - beats["at"] > self.PLAY_FREEZE:
+                    stuck = beats["at"]
+                    names = {t.ident: t.name for t in threading.enumerate()}
+                    seen = []
+                    for ident, frame in sys._current_frames().items():
+                        if names.get(ident) in ("play freeze watcher", "freeze watcher"):
+                            continue
+                        seen.append(f"--- {names.get(ident, ident)} ---\n"
+                                    + "".join(traceback.format_stack(frame)[-10:]).rstrip())
+                elif stuck is not None and beats["at"] > stuck:
+                    w = getattr(self, "watching", None)
+                    _add_problem_note("\n".join([
+                        f"CleanView Play {_app_version()}: after Play now ({videos} video"
+                        f"{'s' if videos > 1 else ''}), the window stopped answering for about "
+                        f"{beats['at'] - stuck:.1f} seconds, starting {stuck - pressed:.1f} "
+                        f"seconds after it was pressed ({time.strftime('%Y-%m-%d %H:%M')}).",
+                        f"Picture came up after: {getattr(w, 'picture_after', None)} s",
+                        _memory_note(), "", *seen, "", "What the player said:",
+                        cvplay.player_said()[-1500:] or "(nothing)"]))
+                    stuck = None
+        threading.Thread(target=watch, daemon=True, name="play freeze watcher").start()
 
     def _gather_choices(self, write=True):
         """Every tick on the review page into each video's cuts, lines, words and quiet music,
