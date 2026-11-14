@@ -18,7 +18,7 @@ touch", then "keeping clean view as a save program only add a play now feature f
   `git fetch original` and `git merge <commit>` (or cherry-pick), then fix what the merge
   touches here. Copy from commits, not from its working copy. Brought in so far: 1.18.90
   (e2d32b6, the start), 1.18.91 (b54b7c7, 2026-11-14; its tests/support.py hiding
-  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her") and 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words). Keep changes to shared files
+  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her"), 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words) and 1.18.98 (12c0363, 2026-11-14, "Al" isn't "hell", two Aladdin lessons for kids). Keep changes to shared files
   small so merges stay easy; Play's own code goes in its own files.
 - Its own program: `%LOCALAPPDATA%\CleanView Play` (APP_DATA in every module), the lock
   `Local\CleanView-Play-open`, `CleanView Play.exe` / `CleanView Play-work.exe`, the
@@ -506,6 +506,22 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   episodes, from scratch): 2 at once 14.7 min, one after the other 19.2 min, the same closer
   looks; each video is slower at once (13-15 min against 9-10) but both are done sooner, so
   the default of 2 stays.
+- Lauren's Aladdin report (1.18.98, 2026-11-14, kids, the AI helper, made on 1.18.94; a cartoon,
+  told right). The four "hell"s muted were the Genie saying "Al" ("Al, you won", "Al, you
+  little genius", "Al, you're not gonna find another girl", "Me, too, Al"): the subtitles say
+  "Al" there, but "hell"/"Al" is under `sounds_alike`'s 0.5 and "Al," starting a sentence
+  isn't a name to `name_in_subtitles`. `subtitle_word_there` now takes a word the subtitles
+  write as a name mid-sentence anywhere (`names`) as a name wherever they write it, so a
+  listed word heard there is offered unticked as misheard; "Al, what the hell?" still mutes
+  "hell". Taught for kids only (her "teach but leave only for kid setting not teen":
+  `_movies@kids`, so Young kids too, not Teens or Adults): "It's not every day you see a horse
+  with two rear ends" (crude) and "You were born a street rat, you'll die a street rat, and
+  only your fleas will mourn you" (bullying). Not fixed: fireworks in "A Whole New World"
+  (60:10) cut as Magic though `LOOK["magic"]` says fireworks aren't; the Genie's lightbulb gag
+  as Dark magic; "Dumbo" (the elephant, in the Genie's spell) muted as rude (rude isn't in
+  `NAME_CATS`); "city of mystery, of enchantment" muted as magic talk; and most of the
+  Genie's magic, Jafar's sorcery and the snake fight not found (weak spot 2). 78 min on her
+  laptop.
 - "sleeping with her" as CleanListen 1.17.37 has it (1.18.97, 2026-11-14): the small words
   that may follow "her" are CleanListen's `SLEEP_HER_NEXT` (a new sentence: he, she, the...;
   time and place: in, at, for, last, before...), so "sleeping with her in Paris" and "...for
@@ -1666,6 +1682,10 @@ Run from the repo folder with the app's own Python (it has the packages the app 
   `CLEANVIEW_TEST_MULTI`.
 - `test_save_fails.py` (NoRoom): a save that fails on a full drive says where, how much is
   free and what to do, and isn't offered for sending; an unexpected failure still is.
+- `test_aladdin.py`: "Al" heard as "hell" offered unticked once the subtitles write "Al" as a
+  name somewhere (also at a sentence's start), a real "hell" still muted, an ordinary other
+  word only noted; the two lessons muted for Kids and Young kids with their filters, not for
+  Teens or Adults.
 - `test_long_hair.py`: the picture checks told long hair alone isn't a woman (the AI on this
   PC's kiss and intimate looks, the cloud's rules); a two-women or two-men scene with a man's
   and a woman's voice there offered unticked (also its tick), left alone otherwise (the voices
