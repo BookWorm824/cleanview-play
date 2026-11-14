@@ -133,6 +133,59 @@ def entry(st, cuts=None, lines=None, words=None, quiet=None):
     return e
 
 
+# ---------- just watching (1.0.9) ----------
+# The owner, 2026-11-14: "what if we also made it an allpurpose player with cleaning
+# capablities. so someone could just open a movie and watch without cleaning", "could it also
+# be like vlc where it plays many types of files?". mpv reads whatever ffmpeg reads, as VLC
+# does; these are what the file picker and "Open with" offer (the picker has All files too).
+VIDEO_TYPES = (".mkv", ".mp4", ".m4v", ".avi", ".mov", ".wmv", ".ts", ".m2ts", ".mts", ".mpg",
+               ".mpeg", ".vob", ".webm", ".flv", ".3gp", ".ogv", ".divx", ".asf", ".rm",
+               ".rmvb", ".f4v")
+AUDIO_TYPES = (".mp3", ".flac", ".m4a", ".wav", ".ogg", ".opus", ".aac", ".wma", ".m4b")
+
+
+def plain_entry(path):
+    """A video played as it is: nothing muted or skipped, and its own subtitles there to turn
+    on (nothing is muted, so they show nothing that's been taken out)."""
+    return {"path": str(path), "title": Path(path).stem, "skips": [], "af": "", "vf": "",
+            "mutes": 0, "long": 0, "cut_seconds": 0, "cues": [], "audio_index": None,
+            "duration": 0, "own_subs": True}
+
+
+def view_key(path):
+    """The work folder name CleanView gives a video (CleanView.pyw: `views/<key>`)."""
+    return engine_key(str(path))
+
+
+def engine_key(v):
+    import hashlib
+    return hashlib.sha1(f"{v}:{os.path.getsize(v)}".encode()).hexdigest()[:16]
+
+
+def cleaned_before(path, views=None):
+    """The checked review of this video, if it was cleaned here before (else None). The file
+    picker and Explorer write a path in different ways, so each way is tried."""
+    views = Path(views or APP_DATA / "views")
+    p = str(path)
+    for v in dict.fromkeys((p, p.replace("\\", "/"), os.path.normpath(p))):
+        try:
+            st = json.loads((views / engine_key(v) / "analysis.json").read_text(encoding="utf8"))
+        except (OSError, ValueError):
+            continue
+        if st.get("path") and st.get("duration"):
+            st["path"] = p
+            return st
+    return None
+
+
+def clean_entry(st):
+    """Play it clean with what was ticked last time (what the review page saved)."""
+    return entry(st, cuts=[c for c in st.get("scenes", []) if c.get("cut")],
+                 lines=[l for l in st.get("lines", []) if l.get("mute")],
+                 words=[m for m in st.get("mutes", []) if not m.get("keep")],
+                 quiet=[q for q in st.get("quiet", []) if q.get("lower", True)])
+
+
 def write_list(entries, folder=None):
     """The list for the player, in the app's own folder. Only times and file names."""
     folder = Path(folder or APP_DATA / "play")
@@ -350,7 +403,7 @@ class Remote:
     keys and clicks on the picture (cvplay.lua) come in on `keys`. `gone` is set once the
     player has closed, or couldn't be reached."""
     WATCH = ("pause", "time-pos", "duration", "playlist-pos", "playlist-count", "volume",
-             "media-title", "sid")
+             "media-title", "sid", "user-data/cvplay/subs")
 
     def __init__(self, pipe, proc=None, wait=20.0):
         self.pipe, self.proc = pipe, proc

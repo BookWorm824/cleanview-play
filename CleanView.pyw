@@ -22,6 +22,7 @@ import cleanview_learn as learn  # noqa: E402
 import videoqueue as VQ  # noqa: E402  (several videos at once)
 import cvlook as look  # noqa: E402  (the drawn look: cards, switches, pill buttons)
 import cvplay  # noqa: E402  (CleanView Play: the player, no copy saved)
+import cvopenwith as open_with  # noqa: E402  (File Explorer's "Open with", 1.0.9)
 
 APP_DATA = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "CleanView Play"
 BG, CARD, INK, MUTED, ACCENT, ACCENT_DK, LINE = (
@@ -87,6 +88,12 @@ PLAY_SAID_MULTI = ("Plays them one after another with what's ticked muted and cu
                    "Nothing is saved.")
 PLAYING_SAID = "Playing. Press Stop under the picture to come back here."
 WATCHED_SAID = "Change a tick and press Play now to watch it again with the change."
+# just watching (1.0.9; the owner: "so someone could just open a movie and watch without
+# cleaning", "like vlc where it plays many types of files")
+CLEANED_BEFORE_ASK = ("You cleaned {what} before.\n\nPlay {it} clean, with what you ticked "
+                      "last time muted and skipped?\n\nYes: play {it} clean.\nNo: play {it} "
+                      "just as {it_is}.")
+OPEN_THESE = APP_DATA / "open_these.json"    # videos sent with "Open with" (launcher.pyw)
 CHIP = {"Nudity": "#B5523B", "Implied": "#C47A5A", "Graphic": "#9A4A2A", "Disturbing": "#5E3A6E", "Sex": "#9A3E66", "Intimate": "#9A3E66", "Kiss": "#B0457A",
         "Violence": "#7A5A1E", "Gore": "#8E2B2B", "Medical": "#7A4A4A", "Smoking": "#5D6470", "Drinking": "#5D6470",
         "Drugs": "#5D6470", "Immodest": "#A0663A", "Sexual": "#9A3E66", "Sleeping": "#9A3E66",
@@ -654,7 +661,7 @@ class Watching(tk.Frame):
         n, pos = len(self.entries), st.get("playlist-pos") or 0
         self.title_lbl.config(text=v.get("title", "") + (f"   ({pos + 1} of {n})" if n > 1 else ""))
         self.pause_btn.config(text="▶  Play" if st.get("pause") else "❚❚  Pause")
-        has_subs = bool(v.get("cues"))
+        has_subs = bool(st.get("user-data/cvplay/subs"))       # cvplay.lua says
         if has_subs != bool(self.subs_btn.winfo_manager()):
             if has_subs:
                 self.subs_btn.pack(side="right", padx=(0, self.app._px(16)))
@@ -757,6 +764,8 @@ class App(tk.Tk):
         self._poll_id = self.after(100, self._poll)
         self._watch_for_freezes()
         self._offer_id = self.after(2500, self._offer_problem_note)
+        self._open_these_id = self.after(300, self._check_open_these)
+        threading.Thread(target=open_with.register, daemon=True, name="open with").start()
         self.after(4000, self._check_update)
         self.bind_all("<F5>", lambda e: self._check_update(manual=True))
 
@@ -1399,6 +1408,20 @@ class App(tk.Tk):
         self.vid_lbl = tk.Label(p1, text="Nothing chosen yet", bg=BG, fg=MUTED, font=(FONT, 10),
                                 wraplength=wrap_width(560), justify="left", anchor="w")
         self.vid_lbl.pack(anchor="w", pady=(X(12), 0))
+        # just watching, no checking first (1.0.9)
+        just = look.Card(p1)
+        just.pack(fill="x", pady=(X(14), 0), padx=(0, X(4)))
+        words = tk.Frame(just.body, bg=CARD)
+        words.pack(side="left", fill="x", expand=True, padx=(0, X(12)))
+        tk.Label(words, text="Just want to watch?", bg=CARD, fg=INK, font=(HEAD, 10),
+                 anchor="w").pack(anchor="w")
+        tk.Label(words, text="Play any video or music file now, as it is, without checking it "
+                 "first. If you cleaned it here before, it can play clean.", bg=CARD, fg=MUTED,
+                 font=(FONT, 9), wraplength=wrap_width(330), justify="left",
+                 anchor="w").pack(anchor="w", pady=(X(2), 0))
+        self.watch_btn = look.Pill(just.body, "\u25b6  Watch a video\u2026", self.watch_files,
+                                   kind="secondary", size=11, pad=(18, 9))
+        self.watch_btn.pack(side="right")
         # Subtitles are always looked for online when a video has none: there was a switch
         # for it here (the owner, 2026-11-13: "that part says look for subtitles with a
         # choice. i think subtitles are important enough that they should be standard"), so
@@ -1407,6 +1430,7 @@ class App(tk.Tk):
         # spanish"): English as always, or another one, with its own word lists
         spoken = look.Card(p1)
         spoken.pack(fill="x", pady=(X(14), 0), padx=(0, X(4)))
+        just.pack_configure(after=spoken)       # watching comes after the cleaning choices
         v = tk.StringVar(value=engine.cvlang.choice(saved.get("language")))
         self.opts["language"] = v
         words = tk.Frame(spoken.body, bg=CARD)
@@ -2711,7 +2735,7 @@ class App(tk.Tk):
 
     def destroy(self):
         self._gone = True            # stops the watcher, and the crash log is closed
-        for name in ("_offer_id", "_beat_id", "_poll_id", "_play_beat_id"):
+        for name in ("_offer_id", "_beat_id", "_poll_id", "_play_beat_id", "_open_these_id"):
             try:
                 self.after_cancel(getattr(self, name))
             except Exception:
@@ -4277,6 +4301,111 @@ class App(tk.Tk):
                         cvplay.player_said()[-1500:] or "(nothing)"]))
                     stuck = None
         threading.Thread(target=watch, daemon=True, name="play freeze watcher").start()
+
+    # ---------- just watching (1.0.9) ----------
+    def watch_files(self, paths=None):
+        """Play videos as they are, no checking first: chosen here, or sent from File
+        Explorer's "Open with". Those cleaned here before can play clean with last time's
+        ticks."""
+        if paths is None:
+            kinds = " ".join("*" + t for t in cvplay.VIDEO_TYPES)
+            sounds = " ".join("*" + t for t in cvplay.AUDIO_TYPES)
+            paths = filedialog.askopenfilenames(
+                parent=self, title="Choose what to watch",
+                filetypes=[("Videos and music", f"{kinds} {sounds}"), ("Videos", kinds),
+                           ("Music", sounds), ("All files", "*.*")])
+        paths = [str(x) for x in paths or () if x]
+        if not paths:
+            return
+        old = getattr(self, "watching", None)
+        if old is not None and old.winfo_exists():
+            old.finish()
+        before = {}
+        for x in paths:
+            try:
+                st = cvplay.cleaned_before(x, APP_DATA / "views")
+            except OSError:             # gone, or its drive unplugged: said when it plays
+                st = None
+            if st:
+                before[x] = st
+        clean = False
+        if before:
+            one = len(before) == 1
+            chime()
+            ans = messagebox.askyesnocancel("CleanView Play", CLEANED_BEFORE_ASK.format(
+                what=f"“{Path(next(iter(before))).stem}”" if one else
+                f"{len(before)} of these", it="it" if one else "them",
+                it_is="it is" if one else "they are"), parent=self)
+            if ans is None:
+                return
+            clean = ans
+        try:
+            entries = [cvplay.clean_entry(before[x]) if clean and x in before
+                       else cvplay.plain_entry(x) for x in paths]
+        except Exception as ex:
+            save_details(traceback.format_exc())
+            messagebox.showerror("CleanView Play", f"Couldn't get it ready to play. "
+                                 f"{plain_error(ex)}", parent=self)
+            return
+
+        def failed(ex, details=None):
+            save_details(details or traceback.format_exc())
+            why = str(ex) if isinstance(ex, cvplay.PlayError) else plain_error(ex)
+            messagebox.showerror("CleanView Play", f"Couldn't play it. {why}", parent=self)
+
+        def done(played, ended):
+            self.watching = None
+            if not played and ended:
+                save_details("The video player closed before the video started.\n\n"
+                             + cvplay.player_said())
+                messagebox.showerror("CleanView Play", "Couldn't play it. The video player "
+                                     "closed before it started. It may be a kind of file it "
+                                     "can't play, or damaged. The details are saved in a "
+                                     "file, for anyone helping you.", parent=self)
+
+        def watch(exe):
+            old = getattr(self, "watching", None)
+            if old is not None and old.winfo_exists():
+                old.finish()
+            self.watching = Watching(self, entries, done)
+            try:
+                self.watching.start(exe, on_error=failed)
+            except Exception as ex:
+                self.watching.finish()
+                failed(ex)
+
+        def go():
+            try:
+                exe = cvplay.player() or cvplay.get_player()
+            except Exception as ex:
+                tb = traceback.format_exc()
+                self.q.put(("call", lambda ex=ex: failed(ex, tb)))
+                return
+            self.q.put(("call", lambda: watch(exe)))
+        threading.Thread(target=go, daemon=True, name="watch").start()
+        self._watch_play_freeze(len(entries))
+
+    def _check_open_these(self):
+        """Videos sent from File Explorer ("Open with CleanView Play"), now or while it was
+        opening: played as they are (launcher.pyw writes the list; 1.0.9)."""
+        try:
+            sent = json.loads(OPEN_THESE.read_text(encoding="utf8"))
+            OPEN_THESE.unlink()
+        except (OSError, ValueError):
+            sent = None
+        if sent and time.time() - sent.get("at", 0) < 120 and sent.get("paths"):
+            try:
+                self.deiconify()
+                self.lift()
+            except tk.TclError:
+                pass
+            self.watch_files(sent["paths"])
+        try:
+            self.after_cancel(self._open_these_id)
+        except (AttributeError, ValueError, tk.TclError):
+            pass
+        if not getattr(self, "_gone", False):
+            self._open_these_id = self.after(700, self._check_open_these)
 
     def _gather_choices(self, write=True):
         """Every tick on the review page into each video's cuts, lines, words and quiet music,

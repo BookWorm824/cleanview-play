@@ -591,8 +591,30 @@ def clicked():
     return True
 
 
+OPEN_THESE = APP_DATA / "open_these.json"   # files sent with "Open with" (1.0.9)
+
+
+def hand_over(args):
+    """Files sent from File Explorer's "Open with CleanView Play" (cvopenwith.py): written
+    down for the window, which plays them as they are (CleanView.pyw: _check_open_these),
+    whether it's open already or just opening."""
+    import time
+    paths = [a for a in args if a != APP_PART and os.path.isfile(a)]
+    if not paths:
+        return
+    try:
+        APP_DATA.mkdir(parents=True, exist_ok=True)
+        tmp = OPEN_THESE.with_suffix(".tmp")
+        tmp.write_text(json.dumps({"at": time.time(), "paths": paths}), encoding="utf8")
+        os.replace(tmp, OPEN_THESE)
+    except OSError:
+        pass
+
+
 if __name__ == "__main__":
     if APP_PART in sys.argv:
         run_app()
-    elif not clicked():
-        run_app()
+    else:
+        hand_over(sys.argv[1:])
+        if not clicked():
+            run_app()

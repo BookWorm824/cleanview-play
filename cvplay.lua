@@ -106,7 +106,7 @@ end
 -- right?"): each video's own .srt from CleanView Play, with the language blanked and muted
 -- lines and cut scenes left out. Off unless turned on with the window's Subtitles button
 -- ("script-message cvplay-subs"); once on, they stay on for the next video. The video's own
--- subtitle tracks are never shown: they'd show the words that are muted.
+-- subtitle tracks are never shown when anything is muted: they'd show the words that are muted.
 local subs_on = false
 local clean_sid = nil
 
@@ -116,10 +116,19 @@ mp.register_event("file-loaded", function()
         mp.commandv("sub-add", current.srt, "auto", "Subtitles (clean)")
         for _, t in ipairs(mp.get_property_native("track-list") or {}) do
             if t.type == "sub" and t.external then
+                clean_sid = t.id            -- the one just added comes last
+            end
+        end
+    elseif current and current.own_subs then
+        -- just watching, nothing muted (1.0.9): the video's own subtitles (or a .srt beside it)
+        for _, t in ipairs(mp.get_property_native("track-list") or {}) do
+            if t.type == "sub" and not clean_sid then
                 clean_sid = t.id
             end
         end
     end
+    -- the window shows its Subtitles button only when there are some
+    mp.set_property_native("user-data/cvplay/subs", clean_sid ~= nil)
     if subs_on and clean_sid then
         mp.set_property_number("sid", clean_sid)
     else

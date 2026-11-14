@@ -546,7 +546,7 @@ class OnTheReviewPage(unittest.TestCase):
         w = self.app.watching
         self.run_ticks(1)
         self.assertFalse(w.subs_btn.winfo_manager(), "no subtitles in this one: no button")
-        w.entries[0]["cues"] = [{"s": 1.0, "e": 2.0, "text": "Hello"}]
+        w.remote.state["user-data/cvplay/subs"] = True          # cvplay.lua: it has some
         self.run_ticks(1)
         self.assertTrue(w.subs_btn.winfo_manager())
         self.assertEqual(w.subs_btn.cget("text"), "Subtitles: Off")
@@ -593,6 +593,217 @@ class OnTheReviewPage(unittest.TestCase):
         self.assertIsNone(getattr(self.app, "watching", None))
 
 
+class JustWatching(unittest.TestCase):
+    """1.0.9 (the owner, 2026-11-14: "what if we also made it an allpurpose player with
+    cleaning capablities. so someone could just open a movie and watch without cleaning",
+    "could it also be like vlc where it plays many types of files?")."""
+    @classmethod
+    def setUpClass(cls):
+        OnTheReviewPage.setUpClass.__func__(cls)
+
+    @classmethod
+    def tearDownClass(cls):
+        OnTheReviewPage.tearDownClass.__func__(cls)
+
+    def setUp(self):
+        self.app.show_setup()
+        self.app.update()
+        self.video = support.SANDBOX / "Some Movie (1999).mkv"
+        self.video.write_bytes(b"x" * 10)
+        self.views = support.APP_DATA / "views"
+
+    def tearDown(self):
+        w = getattr(self.app, "watching", None)
+        if w is not None and w.winfo_exists():
+            w.finish()
+        self.app.update()
+        shutil.rmtree(self.views, ignore_errors=True)
+
+    def cleaned(self, path):
+        st = st_with(path=str(path), duration=100.0)
+        st["mutes"] = [{"s": 14.2, "e": 14.5, "word": "d**n"},
+                       {"s": 50.0, "e": 50.3, "word": "h**l", "keep": True}]   # unticked
+        folder = self.views / cvplay.engine_key(str(path))
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "analysis.json").write_text(json.dumps(st), encoding="utf8")
+        return st
+
+    def watch(self, paths, answer=None):
+        played, asked = [], []
+
+        def play(entries, exe=None, wid=None, extra=()):
+            played.append(entries)
+            return FakeProc()
+
+        def ask(title, msg, **k):
+            asked.append(msg)
+            return answer
+        with mock.patch.object(ui.cvplay, "player", lambda: Path("mpv.exe")), \
+                mock.patch.object(ui.cvplay, "play", play), \
+                mock.patch.object(ui.cvplay, "Remote", FakeRemote), \
+                mock.patch.object(ui.messagebox, "askyesnocancel", ask):
+            self.app.watch_files(paths)
+            for _ in range(300):
+                self.app.update()
+                w = getattr(self.app, "watching", None)
+                if played and w is not None and w.remote is not None:
+                    break
+                if asked and answer is None:
+                    break
+                self.app.after(10)
+        return played, asked
+
+    def test_the_button_is_on_the_start_page(self):
+        self.assertEqual(self.app.watch_btn.cget("text"), "\u25b6  Watch a video\u2026")
+
+    def test_plays_as_it_is(self):
+        played, asked = self.watch([str(self.video)])
+        self.assertEqual(asked, [], "never cleaned here: nothing to ask")
+        e, = played[0]
+        self.assertEqual((e["path"], e["skips"], e["af"], e["vf"]), (str(self.video), [], "", ""))
+        self.assertTrue(e["own_subs"], "its own subtitles there to turn on")
+        self.assertEqual(self.app.page_name, "setup")
+        self.assertIsNotNone(self.app.watching)
+
+    def test_cleaned_before_can_play_clean(self):
+        self.cleaned(self.video)
+        played, asked = self.watch([str(self.video)], answer=True)
+        self.assertIn("You cleaned \u201cSome Movie (1999)\u201d before", asked[0])
+        e, = played[0]
+        self.assertEqual(e["skips"], [[30.0, 38.0]])                 # the ticked scene only
+        self.assertIn("between(t,14.200,14.500)", e["af"])          # the ticked word
+        self.assertNotIn("50.000", e["af"], "a word unticked last time isn't muted")
+        self.assertFalse(e.get("own_subs"), "never the video's own subtitles when cleaned")
+
+    def test_or_as_it_is(self):
+        self.cleaned(self.video)
+        played, asked = self.watch([str(self.video)], answer=False)
+        self.assertEqual(played[0][0]["skips"], [])
+        self.assertEqual(played[0][0]["af"], "")
+
+    def test_or_not_at_all(self):
+        self.cleaned(self.video)
+        played, asked = self.watch([str(self.video)], answer=None)
+        self.assertEqual(len(asked), 1)
+        self.assertEqual(played, [])
+        self.assertIsNone(getattr(self.app, "watching", None))
+
+    def test_found_whichever_way_the_path_is_written(self):
+        self.cleaned(str(self.video).replace("\\", "/"))       # as the file picker writes it
+        self.assertIsNotNone(cvplay.cleaned_before(str(self.video), self.views))   # Explorer's
+        self.assertIsNone(cvplay.cleaned_before(str(support.SANDBOX / "Other.mkv"), self.views)
+                          if (support.SANDBOX / "Other.mkv").exists() else None)
+
+    def test_many_types_offered(self):
+        for kind in (".mkv", ".mp4", ".avi", ".wmv", ".m2ts", ".vob", ".webm", ".mp3", ".flac"):
+            self.assertIn(kind, cvplay.VIDEO_TYPES + cvplay.AUDIO_TYPES)
+        got = {}
+        with mock.patch.object(ui.filedialog, "askopenfilenames",
+                               lambda **k: got.update(k) or ()):
+            self.app.watch_files()
+        names = [n for n, _ in got["filetypes"]]
+        self.assertEqual(names, ["Videos and music", "Videos", "Music", "All files"])
+        self.assertIn("*.mkv", got["filetypes"][0][1])
+
+    def test_a_video_sent_from_file_explorer_plays(self):
+        sent = []
+        with mock.patch.object(self.app, "watch_files", lambda paths=None: sent.append(paths)):
+            ui.OPEN_THESE.write_text(json.dumps({"at": time.time(), "paths": [str(self.video)]}))
+            self.app._check_open_these()
+            ui.OPEN_THESE.write_text(json.dumps({"at": time.time() - 600, "paths": ["old"]}))
+            self.app._check_open_these()                # left from long ago: not played now
+        self.assertEqual(sent, [[str(self.video)]])
+        self.assertFalse(ui.OPEN_THESE.exists())
+
+
+class OpenWith(unittest.TestCase):
+    """File Explorer's "Open with CleanView Play" (cvopenwith), with a stand-in registry:
+    the tests never touch the real one."""
+    def setUp(self):
+        import cvopenwith
+        self.ow = cvopenwith
+        self.root = Path(tempfile.mkdtemp(prefix="cv-ow-"))
+        self.addCleanup(shutil.rmtree, self.root, True)
+        (self.root / "app").mkdir()
+        (self.root / "venv" / "Scripts").mkdir(parents=True)
+        (self.root / "venv" / "Scripts" / "pythonw.exe").write_bytes(b"")
+        self.reg = FakeReg()
+
+    def test_added_for_every_kind_never_the_default(self):
+        self.assertTrue(self.ow.register(self.root / "app", self.reg))
+        keys = self.reg.keys
+        cmd = keys[r"Software\Classes\CleanViewPlay.Media\shell\open\command"][""]
+        self.assertEqual(cmd, f'"{self.root / "venv" / "Scripts" / "pythonw.exe"}" '
+                              f'"{self.root / "app" / "launcher.pyw"}" "%1"')
+        for kind in (".mkv", ".mp4", ".mp3"):
+            self.assertEqual(keys[rf"Software\Classes\{kind}\OpenWithProgids"],
+                             {"CleanViewPlay.Media": ""})
+            self.assertNotIn(rf"Software\Classes\{kind}", keys, "the default is left alone")
+        self.assertFalse(self.ow.register(self.root / "app", self.reg), "nothing changed")
+
+    def test_its_own_name_when_it_has_its_own_exe(self):
+        own = self.root / "venv" / "CleanView Play" / "CleanView Play.exe"
+        own.parent.mkdir(parents=True)
+        own.write_bytes(b"")
+        self.assertTrue(self.ow.command(self.root).startswith(f'"{own}"'))
+
+    def test_only_from_an_installed_copy(self):
+        self.assertFalse(self.ow.register(support.ROOT, self.reg))       # the source folder
+        self.assertEqual(self.reg.keys, {})
+        self.assertIn("cvopenwith.py", json.loads((support.ROOT / "version.json").read_text())
+                      ["files"])
+
+    def test_the_launcher_hands_the_file_over(self):
+        import importlib.machinery
+        import importlib.util
+        path = str(support.ROOT / "launcher.pyw")
+        spec = importlib.util.spec_from_file_location(
+            "cv_launcher", path, loader=importlib.machinery.SourceFileLoader("cv_launcher", path))
+        launcher = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(launcher)
+        video = support.SANDBOX / "Sent.mkv"
+        video.write_bytes(b"x")
+        out = support.SANDBOX / "open_these.json"
+        with mock.patch.object(launcher, "OPEN_THESE", out):
+            launcher.hand_over([str(video), str(support.SANDBOX / "not there.mkv"),
+                                launcher.APP_PART])
+        self.assertEqual(json.loads(out.read_text())["paths"], [str(video)])
+
+
+class FakeReg:
+    HKEY_CURRENT_USER, REG_SZ, __name__ = "HKCU", 1, "fake"
+
+    def __init__(self):
+        self.keys = {}
+
+    class _Key:
+        def __init__(self, reg, key):
+            self.reg, self.key = reg, key
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    def OpenKey(self, root, key):
+        if key not in self.keys:
+            raise OSError(key)
+        return self._Key(self, key)
+
+    def CreateKey(self, root, key):
+        self.keys.setdefault(key, {})
+        return self._Key(self, key)
+
+    def QueryValueEx(self, k, name):
+        if name not in self.keys[k.key]:
+            raise OSError(name)
+        return self.keys[k.key][name], self.REG_SZ
+
+    def SetValueEx(self, k, name, _, kind, value):
+        self.keys[k.key][name] = value
+
+
 class FakeProc:
     pipe = "cvplay-test"
 
@@ -631,6 +842,12 @@ class Script(unittest.TestCase):
         self.assertEqual(cvplay.LIST_ENV, "CVPLAY_LIST")
         for prop in ('"af"', '"vf"', '"aid"', '"time-pos"', '"absolute+exact"'):
             self.assertIn(prop, lua)
+
+    def test_its_own_subtitles_when_just_watching(self):
+        lua = cvplay.SCRIPT.read_text(encoding="utf8")
+        self.assertIn("current.own_subs", lua)
+        self.assertIn('"user-data/cvplay/subs"', lua)
+        self.assertIn("user-data/cvplay/subs", cvplay.Remote.WATCH)
 
     def test_keys_and_clicks_go_to_the_window(self):
         lua = cvplay.SCRIPT.read_text(encoding="utf8")
@@ -797,6 +1014,33 @@ class RealPlayer(unittest.TestCase):
         self.assertEqual(r.state["sub-text"], "Oh \u2014, it's a tone.")
         r.send("script-message", "cvplay-subs")
         self.assertTrue(until(lambda: r.state.get("sid") in (False, "no")))
+
+    def test_just_watching_has_its_own_subtitles(self):
+        # a video played as it is (nothing muted): its own subtitle track there to turn on
+        video = self.tmp / "with subs.mkv"
+        srt = self.tmp / "s.srt"
+        srt.write_text("1\n00:00:00,000 --> 00:00:09,000\nHello there.\n", encoding="utf8")
+        subprocess.run([support.FFMPEG, "-v", "error", "-y", "-i", str(self.video), "-i", str(srt),
+                        "-map", "0:v", "-map", "0:a:0", "-map", "1", "-c", "copy",
+                        "-c:s", "srt", str(video)], check=True)
+        proc = cvplay.play([cvplay.plain_entry(video)], cvplay.player(),
+                           extra=["--vo=null", "--ao=null", "--force-window=no"])
+        r = cvplay.Remote(proc.pipe, proc)
+        self.addCleanup(r.close)
+        self.assertTrue(r.ready.wait(15))
+        r.send("observe_property", 99, "sub-text")
+
+        def until(test, secs=8.0):
+            stop = time.monotonic() + secs
+            while time.monotonic() < stop:
+                if test():
+                    return True
+                time.sleep(0.05)
+            return False
+        self.assertTrue(until(lambda: r.state.get("user-data/cvplay/subs") is True), r.state)
+        self.assertIn(r.state.get("sid"), (False, "no"), "off at first")
+        r.send("script-message", "cvplay-subs")
+        self.assertTrue(until(lambda: r.state.get("sub-text") == "Hello there."), r.state)
 
     @unittest.skipUnless(os.name == "nt", "the picture inside the window is for Windows")
     def test_it_plays_inside_the_window(self):

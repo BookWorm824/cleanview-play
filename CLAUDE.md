@@ -96,6 +96,22 @@ touch", then "keeping clean view as a save program only add a play now feature f
   window's input to mpv's child window (cross-process `--wid`), not at our code.
   Fixed: the owner, 2026-11-14, on 1.0.7: "the new player works well", and "Not
   responding" no longer shows when it opens.
+- Just watching (1.0.9; the owner, 2026-11-14: "what if we also made it an allpurpose
+  player with cleaning capablities. so someone could just open a movie and watch without
+  cleaning", "could it also be like vlc where it plays many types of files?", yes to all of:
+  a Watch button, "play it clean?" for one cleaned before, and "Open with"). The start page's
+  "Just want to watch?" card → `App.watch_files`: any file (`cvplay.VIDEO_TYPES` /
+  `AUDIO_TYPES`, plus All files) plays as it is through `Watching` over the start page
+  (`cvplay.plain_entry`: nothing muted, `own_subs`, so the Subtitles button offers the video's
+  own track; cvplay.lua sets `user-data/cvplay/subs` and the button follows it). If
+  `cvplay.cleaned_before` finds its `views/<key>/analysis.json` (key = CleanView's
+  sha1(path:size), tried with \ and / paths), it asks (yes: `clean_entry` with last time's
+  ticks; no: as it is; cancel). "Open with": `cvopenwith.register()` runs each time the window
+  opens, only from an installed copy (`app\` beside `venv\`), and adds the `CleanViewPlay.Media`
+  ProgID to each kind's `OpenWithProgids` under HKCU (never the default); its command is
+  `<own exe or pythonw> launcher.pyw "%1"`. `launcher.hand_over` writes `open_these.json` and
+  the window's `_check_open_these` (every 0.7 s) plays what's in it if it's under 2 minutes old.
+  Tests use a stand-in registry (`FakeReg`); none touch the real one.
 - The review page: "▶ Play now" instead of "Save clean copy"; the save folder / size row
   is gone; the review stays open (change a tick, play again) and is saved for "Pick up
   where I left off". `_gather_choices()` is the old first half of `_save_from_review()`.
