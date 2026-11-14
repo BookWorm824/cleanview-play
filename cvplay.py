@@ -162,18 +162,152 @@ def engine_key(v):
     return hashlib.sha1(f"{v}:{os.path.getsize(v)}".encode()).hexdigest()[:16]
 
 
-def cleaned_before(path, views=None):
-    """The checked review of this video, if it was cleaned here before (else None). The file
-    picker and Explorer write a path in different ways, so each way is tried."""
+# ---------- the videos cleaned here, known by the file itself (1.0.11) ----------
+# The owner, 2026-11-14: "can we scan a video, save the log of where it should be cut ... come
+# back to it later and it still play clean with out saving the source?" It could (1.0.9), but
+# found a video's log by its path, and her videos are on an external drive whose letter can
+# change. Now a video is known by a fingerprint of the file itself: its size and three small
+# pieces of it (start, middle, end), the same in any folder, on any drive letter, under any
+# name, and for anyone with the very same file. `cleaned.json` lists them (the "Cleaned
+# before" list); each points to its log, the review in views/<key>/analysis.json.
+CHUNK = 1 << 16
+INDEX_NAME = "cleaned.json"
+_index_lock = threading.Lock()
+
+
+def fingerprint(path):
+    """The video's own fingerprint: its size and three 64 KB pieces. Reads 192 KB at most."""
+    import hashlib
+    size = os.path.getsize(path)
+    h = hashlib.sha1(str(size).encode())
+    with open(path, "rb") as f:
+        for at in sorted({0, max(0, size // 2 - CHUNK // 2), max(0, size - CHUNK)}):
+            f.seek(at)
+            h.update(f.read(CHUNK))
+    return f"{size:x}-{h.hexdigest()[:20]}"
+
+
+def _index_path(folder=None):
+    return Path(folder or APP_DATA) / INDEX_NAME
+
+
+def load_index(folder=None):
+    """{fingerprint: {"view", "title", "path", "size", "when", "show"}}"""
+    try:
+        return json.loads(_index_path(folder).read_text(encoding="utf8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _save_index(idx, folder=None):
+    path = _index_path(folder)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(idx, indent=1), encoding="utf8")
+    os.replace(tmp, path)
+
+
+def remember(st, view, folder=None, fp=None):
+    """Put this video on the list of those cleaned here (its log is views/<view>). Returns its
+    fingerprint, or None if the video can't be read (moved, or its drive unplugged)."""
+    path = st.get("path")
+    try:
+        fp = fp or fingerprint(path)
+    except (OSError, TypeError):
+        return None
+    with _index_lock:
+        idx = load_index(folder)
+        idx[fp] = {"view": str(view), "title": Path(path).stem, "path": str(path),
+                   "size": os.path.getsize(path), "when": time.strftime("%Y-%m-%d %H:%M"),
+                   "show": st.get("show") or ""}
+        _save_index(idx, folder)
+    return fp
+
+
+def known_views(folder=None):
+    return {e.get("view") for e in load_index(folder).values()}
+
+
+def index_views(views=None):
+    """Put videos cleaned before 1.0.11 on the list: each log whose video can be read now (a
+    drive that's unplugged is tried again next time). How many were added."""
     views = Path(views or APP_DATA / "views")
-    p = str(path)
-    for v in dict.fromkeys((p, p.replace("\\", "/"), os.path.normpath(p))):
+    known, added = known_views(views.parent), 0
+    for log in sorted(views.glob("*/analysis.json")):
+        if log.parent.name in known:
+            continue
         try:
-            st = json.loads((views / engine_key(v) / "analysis.json").read_text(encoding="utf8"))
+            st = json.loads(log.read_text(encoding="utf8"))
         except (OSError, ValueError):
             continue
-        if st.get("path") and st.get("duration"):
-            st["path"] = p
+        if st.get("duration") and st.get("path") and os.path.isfile(st["path"]):
+            if remember(st, log.parent.name, views.parent):
+                added += 1
+    return added
+
+
+def cleaned_list(folder=None):
+    """The videos cleaned here, newest first: [{"fp", "title", "path", "when", ...}]."""
+    items = [dict(e, fp=fp) for fp, e in load_index(folder).items()]
+    return sorted(items, key=lambda e: e.get("when", ""), reverse=True)
+
+
+def find_again(item):
+    """Where a listed video is now: where it was, or the same place on another drive letter
+    (an external drive's letter can change), checked by its fingerprint. None if not found."""
+    import string
+    was = str(item.get("path") or "")
+    places = [was]
+    if len(was) > 2 and was[1] == ":":
+        places += [f"{d}:{was[2:]}" for d in string.ascii_uppercase if d != was[0].upper()]
+    for p in places:
+        try:
+            if os.path.isfile(p) and os.path.getsize(p) == item.get("size") \
+                    and fingerprint(p) == item["fp"]:
+                return p
+        except OSError:
+            continue
+    return None
+
+
+def _load_log(views, view, path):
+    try:
+        st = json.loads((Path(views) / view / "analysis.json").read_text(encoding="utf8"))
+    except (OSError, ValueError):
+        return None
+    if st.get("path") and st.get("duration"):
+        st["path"] = str(path)
+        return st
+    return None
+
+
+def cleaned_before(path, views=None):
+    """The checked review of this video, if it was cleaned here before (else None): found by
+    the file's fingerprint, wherever it is now; else, for a log not on the list yet, by its
+    path (written in any of the ways the file picker and Explorer write it)."""
+    views = Path(views or APP_DATA / "views")
+    p = str(path)
+    try:
+        fp = fingerprint(p)
+    except OSError:
+        fp = None
+    if fp:
+        e = load_index(views.parent).get(fp)
+        if e:
+            st = _load_log(views, e["view"], p)
+            if st:
+                if e.get("path") != p:          # moved: remember where it is now
+                    remember(st, e["view"], views.parent, fp)
+                return st
+    for v in dict.fromkeys((p, p.replace("\\", "/"), os.path.normpath(p))):
+        try:
+            view = engine_key(v)
+        except OSError:
+            continue
+        st = _load_log(views, view, p)
+        if st:
+            if fp:
+                remember(st, view, views.parent, fp)
             return st
     return None
 

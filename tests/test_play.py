@@ -747,6 +747,178 @@ class JustWatching(unittest.TestCase):
         self.assertFalse(ui.OPEN_THESE.exists())
 
 
+class CleanedBefore(unittest.TestCase):
+    """1.0.11 (the owner, 2026-11-14: "can we scan a video, save the log of where it should be
+    cut ... come back to it later and it still play clean with out saving the source?", then
+    yes to knowing a video by the file itself, and a Cleaned before list)."""
+    @classmethod
+    def setUpClass(cls):
+        OnTheReviewPage.setUpClass.__func__(cls)
+
+    @classmethod
+    def tearDownClass(cls):
+        OnTheReviewPage.tearDownClass.__func__(cls)
+
+    def setUp(self):
+        self.app.show_setup()
+        self.app.update()
+        self.dir = Path(tempfile.mkdtemp(prefix="cv-cleaned-", dir=support.SANDBOX))
+        self.addCleanup(shutil.rmtree, self.dir, True)
+        self.views = support.APP_DATA / "views"
+        self.addCleanup(shutil.rmtree, self.views, True)
+        self.addCleanup(lambda: (support.APP_DATA / cvplay.INDEX_NAME).unlink(missing_ok=True))
+        self.video = self.dir / "Castle S02E06.mkv"
+        self.video.write_bytes(os.urandom(300_000))
+
+    def tearDown(self):
+        for name in ("watching", "cleaned_win"):
+            w = getattr(self.app, name, None)
+            if w is not None and w.winfo_exists():
+                (w.finish if name == "watching" else w.destroy)()
+        self.app.update()
+
+    def scanned(self, path):
+        """As a scan and review leave it: the log in views/<key>, on the list."""
+        st = st_with(path=str(path), duration=100.0)
+        view = cvplay.engine_key(str(path))
+        (self.views / view).mkdir(parents=True, exist_ok=True)
+        (self.views / view / "analysis.json").write_text(json.dumps(st), encoding="utf8")
+        return st, view
+
+    def test_the_file_itself_is_known(self):
+        fp = cvplay.fingerprint(self.video)
+        moved = self.dir / "elsewhere" / "renamed.mkv"
+        moved.parent.mkdir()
+        shutil.copy(self.video, moved)
+        self.assertEqual(cvplay.fingerprint(moved), fp, "any folder, any name")
+        other = self.dir / "other.mkv"
+        other.write_bytes(os.urandom(300_000))
+        self.assertNotEqual(cvplay.fingerprint(other), fp)
+        tiny = self.dir / "tiny.mp3"
+        tiny.write_bytes(b"abc")
+        self.assertTrue(cvplay.fingerprint(tiny).startswith("3-"))
+
+    def test_moved_and_renamed_still_plays_clean(self):
+        st, view = self.scanned(self.video)
+        cvplay.remember(st, view, support.APP_DATA)
+        moved = self.dir / "Another drive" / "castle 2x06.mkv"
+        moved.parent.mkdir()
+        shutil.move(str(self.video), moved)
+        found = cvplay.cleaned_before(str(moved), self.views)
+        self.assertIsNotNone(found)
+        self.assertEqual(found["path"], str(moved))
+        self.assertEqual(cvplay.load_index(support.APP_DATA)[cvplay.fingerprint(moved)]["path"],
+                         str(moved), "where it is now is remembered")
+
+    def test_cleaned_before_this_update_are_listed_too(self):
+        st, view = self.scanned(self.video)          # a log from before 1.0.11, not listed
+        self.assertEqual(cvplay.cleaned_list(support.APP_DATA), [])
+        self.assertEqual(cvplay.index_views(self.views), 1)
+        (item,) = cvplay.cleaned_list(support.APP_DATA)
+        self.assertEqual((item["title"], item["view"]), ("Castle S02E06", view))
+        self.assertEqual(cvplay.index_views(self.views), 0, "once")
+
+    def test_an_old_log_found_by_its_path_goes_on_the_list(self):
+        self.scanned(self.video)
+        self.assertIsNotNone(cvplay.cleaned_before(str(self.video), self.views))
+        self.assertIn(cvplay.fingerprint(self.video), cvplay.load_index(support.APP_DATA))
+
+    def test_found_on_another_drive_letter(self):
+        st, view = self.scanned(self.video)
+        fp = cvplay.remember(st, view, support.APP_DATA)
+        item = dict(cvplay.cleaned_list(support.APP_DATA)[0])
+        here = str(self.video)
+        other = "Q" if here[0].upper() != "Q" else "R"
+        item["path"] = other + here[1:]              # the drive had another letter then
+        self.assertEqual(cvplay.find_again(item), here)
+        item["fp"] = "0-not-it"
+        self.assertIsNone(cvplay.find_again(item), "same name and size isn't enough")
+        self.assertTrue(fp)
+
+    def test_a_reviewed_video_goes_on_the_list(self):
+        (support.SANDBOX / "Sample Show S01E01.mp4").write_bytes(b"sample video")
+        support.write_review()
+        self.assertTrue(self.app._resume())
+        self.app.update()
+        self.app._save_session()
+        for _ in range(100):
+            if cvplay.cleaned_list(support.APP_DATA):
+                break
+            time.sleep(0.02)
+        titles = [e["title"] for e in cvplay.cleaned_list(support.APP_DATA)]
+        self.assertIn("Sample Show S01E01", titles)
+
+    def test_the_list_plays_one_clean(self):
+        st, view = self.scanned(self.video)
+        cvplay.remember(st, view, support.APP_DATA)
+        self.assertEqual(self.app.cleaned_btn.cget("text"), "Cleaned before\u2026")
+        asked = []
+        with mock.patch.object(self.app, "watch_files",
+                               lambda paths=None, clean=None: asked.append((paths, clean))):
+            self.app.show_cleaned()
+            win = self.app.cleaned_win
+            self.app.update()
+            tree = next(c for c in win.winfo_children()[2].winfo_children()
+                        if isinstance(c, ui.ttk.Treeview))
+            self.assertEqual(tree.item("0")["values"][0], "Castle S02E06")
+            tree.event_generate("<Return>")
+            for _ in range(200):
+                self.app.update()
+                if asked:
+                    break
+                self.app.after(10)
+        self.assertEqual(asked, [([str(self.video)], True)])
+        self.assertFalse(win.winfo_exists())
+
+    def test_one_that_cant_be_found_is_said(self):
+        st, view = self.scanned(self.video)
+        cvplay.remember(st, view, support.APP_DATA)
+        self.video.unlink()                         # the drive isn't plugged in
+        said = []
+        with mock.patch.object(ui.messagebox, "askyesno",
+                               lambda t, m, **k: said.append(m) or False), \
+                mock.patch.object(self.app, "watch_files", mock.Mock()) as watch:
+            self.app.show_cleaned()
+            win = self.app.cleaned_win
+            self.app.update()
+            tree = next(c for c in win.winfo_children()[2].winfo_children()
+                        if isinstance(c, ui.ttk.Treeview))
+            tree.event_generate("<Return>")
+            for _ in range(200):
+                self.app.update()
+                if said:
+                    break
+                self.app.after(10)
+        self.assertIn("Can't find \u201cCastle S02E06\u201d where it was", said[0])
+        watch.assert_not_called()
+
+    def test_nothing_cleaned_yet(self):
+        said = []
+        with mock.patch.object(ui.messagebox, "showinfo", lambda t, m, **k: said.append(m)):
+            self.app.show_cleaned()
+        self.assertIn("Nothing cleaned yet", said[0])
+
+    def test_from_the_list_it_doesnt_ask_again(self):
+        st, view = self.scanned(self.video)
+        cvplay.remember(st, view, support.APP_DATA)
+        played, asked = [], []
+        with mock.patch.object(ui.cvplay, "player", lambda: Path("mpv.exe")), \
+                mock.patch.object(ui.cvplay, "play",
+                                  lambda e, *a, **k: played.append(e) or FakeProc()), \
+                mock.patch.object(ui.cvplay, "Remote", FakeRemote), \
+                mock.patch.object(ui.messagebox, "askyesnocancel",
+                                  lambda *a, **k: asked.append(a)):
+            self.app.watch_files([str(self.video)], clean=True)
+            for _ in range(300):
+                self.app.update()
+                w = self.app.watching
+                if played and w is not None and w.remote is not None:
+                    break
+                self.app.after(10)
+        self.assertEqual(asked, [])
+        self.assertEqual(played[0][0]["skips"], [[30.0, 38.0]])
+
+
 class OpenWith(unittest.TestCase):
     """File Explorer's "Open with CleanView Play" (cvopenwith), with a stand-in registry:
     the tests never touch the real one."""

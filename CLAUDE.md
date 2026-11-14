@@ -126,6 +126,20 @@ touch", then "keeping clean view as a save program only add a play now feature f
   `cvplay.cleaned_before` (reads the file's size: a sleeping drive spins up first), getting the
   player and `clean_entry` run in background threads; "play it clean?" is asked over the
   player's screen. The drive's own spin-up can't be made faster; it's shown now.
+- Cleaned before (1.0.11; the owner: "can we scan a video, save the log of where it should
+  be cut ... come back to it later and it still play clean with out saving the source?", then
+  yes to knowing a video by the file itself and a list). A video is known by
+  `cvplay.fingerprint` (size + sha1 of three 64 KB pieces: start, middle, end), so its log is
+  found in any folder, on any drive letter, under any name. `APP_DATA\cleaned.json`
+  (`load_index`/`remember`, a lock and atomic writes) maps fingerprint → {view, title, path,
+  size, when, show}. `_write_session` → `_remember_cleaned` (background thread, only views not
+  listed yet); at start `index_views` lists logs from before 1.0.11 whose video can be read
+  now. `cleaned_before` tries the fingerprint first, then the old path keys (and lists what it
+  finds). The start page's card has "Cleaned before…" → `show_cleaned`: a list newest first;
+  Play clean → `find_again` (where it was, else the same path on every other drive letter,
+  checked by fingerprint) → `watch_files([path], clean=True)` (no question); not found → "Is its
+  drive plugged in? Find it yourself?" → a file picker, checked by fingerprint ("That's a
+  different video, or a different version of it").
 - The review page: "▶ Play now" instead of "Save clean copy"; the save folder / size row
   is gone; the review stays open (change a tick, play again) and is saved for "Pick up
   where I left off". `_gather_choices()` is the old first half of `_save_from_review()`.
