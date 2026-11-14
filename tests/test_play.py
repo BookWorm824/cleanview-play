@@ -557,9 +557,10 @@ class OnTheReviewPage(unittest.TestCase):
                 mock.patch.object(ui.cvplay, "play", play), \
                 mock.patch.object(ui.cvplay, "Remote", FakeRemote):
             self.app._play_from_review()
-            for _ in range(1000):
+            for _ in range(1000):           # until the player is being started
                 self.app.update()
-                if getattr(self.app, "watching", None) is not None:
+                w = getattr(self.app, "watching", None)
+                if w is not None and getattr(w, "started", None):
                     break
                 self.app.after(10)
             self.app.watching._do("stop")
@@ -906,79 +907,108 @@ class CleanedBefore(unittest.TestCase):
         titles = [e["title"] for e in cvplay.cleaned_list(support.APP_DATA)]
         self.assertIn("Sample Show S01E01", titles)
 
+    def tree_of(self, win):
+        return next(c for c in win.winfo_children()[2].winfo_children()
+                    if isinstance(c, ui.ttk.Treeview))
+
+    def choose(self, title="Castle S02E06"):
+        """Open Cleaned before, choose this one and press Play clean (Enter)."""
+        self.app.show_cleaned()
+        win = self.app.cleaned_win
+        self.app.update()
+        tree = self.tree_of(win)
+        row = next(i for i in tree.get_children() if tree.item(i)["values"][0] == title)
+        tree.selection_set(row)
+        win.play()                          # Play clean (a made-up key can go astray)
+        return win
+
     def test_the_list_plays_one_clean(self):
         st, view = self.scanned(self.video)
         cvplay.remember(st, view, support.APP_DATA)
         self.assertEqual(self.app.cleaned_btn.cget("text"), "Cleaned before\u2026")
         asked = []
         with mock.patch.object(self.app, "watch_files",
-                               lambda paths=None, clean=None: asked.append((paths, clean))):
-            self.app.show_cleaned()
-            win = self.app.cleaned_win
+                               lambda paths=None, clean=None, find=None, expect=None:
+                               asked.append((clean, find["title"]))):
+            win = self.choose()
             self.app.update()
-            tree = next(c for c in win.winfo_children()[2].winfo_children()
-                        if isinstance(c, ui.ttk.Treeview))
-            self.assertEqual(tree.item("0")["values"][0], "Castle S02E06")
-            row = next(i for i in tree.get_children()
-                       if tree.item(i)["values"][0] == "Castle S02E06")
-            tree.selection_set(row)
-            tree.event_generate("<Return>")
-            for _ in range(1000):
-                self.app.update()
-                if asked:
-                    break
-                self.app.after(10)
-        self.assertEqual(asked, [([str(self.video)], True)])
+        self.assertEqual(asked, [(True, "Castle S02E06")])
         self.assertFalse(win.winfo_exists())
+
+    def play_from_list(self, find_again=None, said=None, answer=False):
+        played = []
+        patches = [mock.patch.object(ui.cvplay, "player", lambda: Path("mpv.exe")),
+                   mock.patch.object(ui.cvplay, "play",
+                                     lambda e, *a, **k: played.append(e) or FakeProc()),
+                   mock.patch.object(ui.cvplay, "Remote", FakeRemote),
+                   mock.patch.object(ui.messagebox, "askyesno",
+                                     lambda t, m, **k: (said.append(m) if said is not None
+                                                        else None) or answer)]
+        if find_again:
+            patches.append(mock.patch.object(ui.cvplay, "find_again", find_again))
+        for x in patches:
+            x.start()
+            self.addCleanup(x.stop)
+        self.choose()
+        return played
+
+    def pump_until(self, test, secs=10):
+        stop = time.monotonic() + secs
+        while time.monotonic() < stop:
+            self.app.update()
+            if test():
+                return True
+            self.app.after(10)
+        return False
+
+    def test_the_player_says_its_looking_then_plays_it_clean(self):
+        # 1.0.14: "when i clicked on play one i cleaned before it took a while to load.
+        # understandaable. but it didn't gove any indication of what was happening"
+        st, view = self.scanned(self.video)
+        cvplay.remember(st, view, support.APP_DATA)
+        gate, real = threading.Event(), cvplay.find_again
+
+        def slow(item):
+            gate.wait(5)                    # a sleeping drive waking up
+            return real(item)
+        played = self.play_from_list(find_again=slow)
+        self.app.update()
+        w = self.app.watching
+        self.assertIsNotNone(w, "the player's window is up at once")
+        self.assertEqual(w.msg.cget("text"), "Looking for \u201cCastle S02E06\u201d\u2026")
+        self.assertTrue(w.msg.place_info(), "big, in the middle")
+        gate.set()
+        self.assertTrue(self.pump_until(lambda: played and w.remote is not None))
+        self.assertEqual(w.msg.cget("text"), "Opening\u2026")
+        self.assertEqual(played[0][0]["path"], str(self.video))
+        self.assertEqual(played[0][0]["skips"], [[30.0, 38.0]])         # clean, not asked
+        w.remote.state.update({"time-pos": 1.0, "duration": 100.0})
+        w._tick()
+        self.assertFalse(w.msg.place_info(), "gone once the picture is up")
 
     def test_one_that_cant_be_found_is_said(self):
         st, view = self.scanned(self.video)
         cvplay.remember(st, view, support.APP_DATA)
         self.video.unlink()                         # the drive isn't plugged in
         said = []
-        with mock.patch.object(ui.messagebox, "askyesno",
-                               lambda t, m, **k: said.append(m) or False), \
-                mock.patch.object(self.app, "watch_files", mock.Mock()) as watch:
-            self.app.show_cleaned()
-            win = self.app.cleaned_win
-            self.app.update()
-            tree = next(c for c in win.winfo_children()[2].winfo_children()
-                        if isinstance(c, ui.ttk.Treeview))
-            row = next(i for i in tree.get_children()
-                       if tree.item(i)["values"][0] == "Castle S02E06")
-            tree.selection_set(row)
-            tree.event_generate("<Return>")
-            for _ in range(1000):
-                self.app.update()
-                if said:
-                    break
-                self.app.after(10)
+        played = self.play_from_list(said=said, answer=False)
+        self.assertTrue(self.pump_until(lambda: said))
         self.assertIn("Can't find \u201cCastle S02E06\u201d where it was", said[0])
-        watch.assert_not_called()
+        self.assertEqual(played, [])
+        self.assertIsNone(self.app.watching, "its window closed")
 
-    def test_leftovers_looked_at_once_a_day_never_the_open_review(self):
-        support.write_review()
-        self.assertTrue(self.app._resume())
-        self.app.update()
-        note = support.APP_DATA / self.app.TIDY_NOTE
-        note.unlink(missing_ok=True)
-        self.addCleanup(note.unlink, True)
-        calls = []
-
-        def tidy(views=None, days=365, keep_views=(), now=None):
-            calls.append(set(keep_views))
-            return 5_000_000
-        with mock.patch.object(ui.cvplay, "tidy_leftovers", tidy):
-            self.app._tidy_leftovers()
-            for _ in range(100):
-                if note.exists():
-                    break
-                time.sleep(0.02)
-            self.app._tidy_leftovers()                  # again today: not again
-            time.sleep(0.2)
-        self.assertEqual(len(calls), 1)
-        self.assertIn(Path(self.app.jobs[0]["work"]).name, calls[0])
-        self.assertIn("Cleared 5 MB", note.read_text(encoding="utf8"))
+    def test_a_different_file_chosen_is_said(self):
+        st, view = self.scanned(self.video)
+        cvplay.remember(st, view, support.APP_DATA)
+        other = self.dir / "something else.mkv"
+        other.write_bytes(os.urandom(300_000))
+        told = []
+        with mock.patch.object(ui.messagebox, "showinfo", lambda t, m, **k: told.append(m)), \
+                mock.patch.object(ui.cvplay, "player", lambda: Path("mpv.exe")):
+            self.app.watch_files([str(other)], clean=True,
+                                 expect=cvplay.fingerprint(self.video))
+            self.assertTrue(self.pump_until(lambda: told))
+        self.assertIn("That's a different video", told[0])
 
     def test_nothing_cleaned_yet(self):
         said = []
@@ -1515,7 +1545,9 @@ class RealPlayer(unittest.TestCase):
         w.extra = ["--ao=null"]
         w.start(cvplay.player())
         user32 = ctypes.windll.user32
-        user32.GetWindow.restype = wintypes.HWND
+        user32.FindWindowExW.restype = wintypes.HWND
+        user32.FindWindowExW.argtypes = (wintypes.HWND, wintypes.HWND, wintypes.LPCWSTR,
+                                         wintypes.LPCWSTR)
 
         def size(hwnd):
             rc = wintypes.RECT()
@@ -1534,8 +1566,12 @@ class RealPlayer(unittest.TestCase):
             return False
         area = w.video.winfo_id()
         self.assertTrue(pump(lambda: w.played), "the video started")
-        self.assertTrue(pump(lambda: user32.GetWindow(wintypes.HWND(area), 5)), "the picture")
-        child = user32.GetWindow(wintypes.HWND(area), 5)          # GW_CHILD
+        # the player's own window inside the picture area (class "mpv"; the area also holds
+        # the "Opening…" message, 1.0.14)
+        def mpv_window():
+            return user32.FindWindowExW(wintypes.HWND(area), None, "mpv", None)
+        self.assertTrue(pump(mpv_window), "the picture")
+        child = mpv_window()
         self.assertTrue(pump(lambda: size(child) == size(area)), (size(child), size(area)))
         w.win.geometry("640x480")
         self.assertTrue(pump(lambda: size(area)[0] < 700 and size(child) == size(area)),

@@ -163,6 +163,15 @@ touch", then "keeping clean view as a save program only add a play now feature f
   the new window keeps the size/place/full screen, and for the same videos the player carries
   on from that spot (`cvplay.play(start_at=)`: `--playlist-start` and the entry's "start",
   which cvplay.lua seeks to once on file-loaded).
+- Saying what it's doing until the picture comes up (1.0.14; the owner, after Cleaned before:
+  "it took a while to load. understandaable. but it didn't gove any indication of what was
+  happening"). `Watching.msg`, a big label in the middle of the picture area, and the time
+  label show `status` (`set_status`) until the first time-pos; then the label is forgotten
+  (mpv's own window, class "mpv", sits over it anyway). Cleaned before's Play clean closes the
+  list and calls `watch_files(clean=True, find=item)`: the player's window comes up at once
+  saying "Looking for “title”…", `find_again` runs in the "watch" thread, then "Opening…"; not
+  found → the window closes and it asks "Is its drive plugged in? Find it yourself?" → a chosen
+  file goes through `watch_files(expect=fingerprint)` ("That's a different video...").
 - The review page: "▶ Play now" instead of "Save clean copy"; the save folder / size row
   is gone; the review stays open (change a tick, play again) and is saved for "Pick up
   where I left off". `_gather_choices()` is the old first half of `_save_from_review()`.

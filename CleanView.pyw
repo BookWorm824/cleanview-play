@@ -463,6 +463,11 @@ class Watching(tk.Frame):
         self._bar_shown = True
         self.video = tk.Frame(self, bg=PLAYER_BG)
         self.video.pack(side="top", fill="both", expand=True)
+        # what it's doing, big in the middle until the picture comes up (1.0.14; the owner,
+        # after "Cleaned before": "it didn't gove any indication of what was happening")
+        self.msg = tk.Label(self.video, text=self.status, bg=PLAYER_BG, fg=PLAYER_INK,
+                            font=(FONT, 16), justify="center", wraplength=app._px(560))
+        self.msg.place(relx=0.5, rely=0.5, anchor="center")
         self._build_bar()
         for seq, what in self.KEYMAP.items():          # keys in this window only
             win.bind(seq, lambda e, w=what: self._do(w))
@@ -559,6 +564,13 @@ class Watching(tk.Frame):
             self.hold = (frac, time.monotonic() + 0.8)
 
     # ---------- playing ----------
+    def set_status(self, text):
+        """What it's doing before the picture comes up: in the middle and beside the time."""
+        self.status = text
+        if not self.played:
+            self.time_lbl.config(text=text)
+            self.msg.config(text=text)
+
     def close_window(self):
         """The window's X: only the player closes; CleanView Play stays open."""
         self.finish()
@@ -571,7 +583,7 @@ class Watching(tk.Frame):
         self.update_idletasks()
         wid = self.video.winfo_id()
         self.started = time.monotonic()
-        self.time_lbl.config(text="Opening\u2026")
+        self.set_status("Opening\u2026")
         self.win.title(f"{self.entries[0].get('title', '')} - CleanView Play")
         self.picture_after = None       # seconds from Play now to the picture (problem notes)
 
@@ -675,6 +687,7 @@ class Watching(tk.Frame):
         if t is not None and not self.played:
             self.played = True
             self.picture_after = round(time.monotonic() - self.started, 1)
+            self.msg.place_forget()
         total = cvplay.watch_length(v, st.get("duration"))
         frac = cvplay.watched(v["skips"], t or 0) / total if total else 0.0
         held, until = self.hold
@@ -685,7 +698,7 @@ class Watching(tk.Frame):
         self._draw_pos(frac)
         said = f"{clock(frac * total)} / {clock(total)}" if total else ""
         if not self.played:
-            said = "Opening\u2026"          # until the picture comes up
+            said = self.status              # until the picture comes up
         if time.monotonic() - self._loud < 2 and st.get("volume") is not None:
             said = f"Volume {round(st['volume'])}%     " + said
         self.time_lbl.config(text=said)
@@ -4382,10 +4395,13 @@ class App(tk.Tk):
         threading.Thread(target=watch, daemon=True, name="play freeze watcher").start()
 
     # ---------- just watching (1.0.9) ----------
-    def watch_files(self, paths=None, clean=None):
+    def watch_files(self, paths=None, clean=None, find=None, expect=None):
         """Play videos as they are, no checking first: chosen here, or sent from File
         Explorer's "Open with". Those cleaned here before can play clean with last time's
-        ticks."""
+        ticks. find: a Cleaned before item, looked for first (where it was, or on another
+        drive letter); expect: the fingerprint a file chosen for one must have."""
+        if find is not None:
+            paths = [find.get("path") or ""]
         if paths is None:
             kinds = " ".join("*" + t for t in cvplay.VIDEO_TYPES)
             sounds = " ".join("*" + t for t in cvplay.AUDIO_TYPES)
@@ -4421,14 +4437,33 @@ class App(tk.Tk):
         # chose a file it also was very slow opening it seemed before playing"). Looking for a
         # past cleaning reads the drive, which may have to wake up first, and the player may
         # have to be fetched: both are done in the background meanwhile.
-        self.watching = w = Watching(self, [cvplay.plain_entry(x) for x in paths], done)
+        status = (f"Looking for \u201c{find.get('title', '')}\u201d\u2026" if find is not None
+                  else "Opening\u2026")
+        self.watching = w = Watching(self, [cvplay.plain_entry(x) for x in paths], done,
+                                     status=status)
         self._watch_play_freeze(len(paths))
+
+        def not_found():
+            w.finish()
+            if not messagebox.askyesno(
+                    "CleanView Play", f"Can't find \u201c{find['title']}\u201d where it was. "
+                    "Is its drive plugged in?\n\nFind it yourself?", parent=self):
+                return
+            path = filedialog.askopenfilename(parent=self, title=f"Where is "
+                                              f"\u201c{find['title']}\u201d now?")
+            if path:
+                self.watch_files([str(path)], clean=True, expect=find["fp"])
+
+        def different():
+            w.finish()
+            messagebox.showinfo("CleanView Play", "That's a different video, or a different "
+                                "version of it, so what was ticked wouldn't line up. Choose "
+                                "the same file that was cleaned.", parent=self)
 
         def begin(entries, exe):
             if w.closing:
                 return
-            if entries:
-                w.entries = entries
+            w.entries = entries or [cvplay.plain_entry(x) for x in paths]
             try:
                 w.start(exe, on_error=failed)
             except Exception as ex:
@@ -4468,6 +4503,21 @@ class App(tk.Tk):
             threading.Thread(target=make, daemon=True, name="watch clean").start()
 
         def go():
+            if find is not None:            # where is it now? (a sleeping drive: a moment)
+                where = cvplay.find_again(find)
+                if where is None:
+                    self.q.put(("call", not_found))
+                    return
+                paths[:] = [where]
+                self.q.put(("call", lambda: w.set_status("Opening\u2026")))
+            elif expect:                    # the very same file?
+                try:
+                    same = cvplay.fingerprint(paths[0]) == expect
+                except OSError:
+                    same = False
+                if not same:
+                    self.q.put(("call", different))
+                    return
             before = {}
             for x in paths:
                 try:
@@ -4583,72 +4633,23 @@ class App(tk.Tk):
             tree.insert("", "end", iid=str(n), values=(e.get("title", ""), when))
         tree.selection_set("0")
         tree.focus("0")
-        said = tk.Label(win, text="", bg=BG, fg=MUTED, font=(FONT, 9), anchor="w",
-                        justify="left", wraplength=wrap_width(460))
-        said.pack(fill="x", padx=X(20), pady=(X(8), 0))
         row = tk.Frame(win, bg=BG)
-        row.pack(fill="x", padx=X(20), pady=(X(10), X(16)))
+        row.pack(fill="x", padx=X(20), pady=(X(14), X(16)))
         ttk.Button(row, text="Close", style="Plain.TButton",
                    command=win.destroy).pack(side="right")
         play_btn = ttk.Button(row, text="\u25b6  Play clean", style="Go.TButton")
         play_btn.pack(side="right", padx=(0, X(8)))
-
-        def found(item, path):
-            if not win.winfo_exists():
-                return
-            play_btn.config(state="normal")
-            if path is None:
-                said.config(text="")
-                if not messagebox.askyesno(
-                        "CleanView Play", f"Can't find \u201c{item['title']}\u201d where it "
-                        "was. Is its drive plugged in?\n\nFind it yourself?", parent=win):
-                    return
-                path = filedialog.askopenfilename(parent=win, title=f"Where is "
-                                                  f"\u201c{item['title']}\u201d now?")
-                if not path:
-                    return
-                check(item, str(path), chosen=True)
-                return
-            win.destroy()
-            self.watch_files([path], clean=True)
-
-        def check(item, path, chosen=False):
-            """Is this the very same video? (a fingerprint, in the background)"""
-            said.config(text="Checking it\u2026")
-
-            def go():
-                try:
-                    same = cvplay.fingerprint(path) == item["fp"]
-                except OSError:
-                    same = False
-
-                def back():
-                    if not win.winfo_exists():
-                        return
-                    if same:
-                        found(item, path)
-                    else:
-                        said.config(text="")
-                        messagebox.showinfo("CleanView Play", "That's a different video, or a "
-                                            "different version of it, so what was ticked "
-                                            "wouldn't line up. Choose the same file that was "
-                                            "cleaned.", parent=win)
-                self.q.put(("call", back))
-            threading.Thread(target=go, daemon=True, name="check cleaned").start()
 
         def play(e=None):
             sel = tree.selection()
             if not sel:
                 return
             item = items[int(sel[0])]
-            play_btn.config(state="disabled")
-            said.config(text=f"Looking for \u201c{item['title']}\u201d\u2026")
-
-            def go():
-                path = cvplay.find_again(item)          # a sleeping drive may take a moment
-                self.q.put(("call", lambda: found(item, path)))
-            threading.Thread(target=go, daemon=True, name="find cleaned").start()
+            win.destroy()
+            # the player's window at once, saying it's looking for the video (1.0.14)
+            self.watch_files(clean=True, find=item)
         play_btn.config(command=play)
+        win.play = play                 # (what Play clean does: tests press it)
         tree.bind("<Double-1>", play)
         tree.bind("<Return>", play)
         win.update_idletasks()
