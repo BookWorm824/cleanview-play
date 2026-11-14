@@ -299,14 +299,15 @@ class OnTheReviewPage(unittest.TestCase):
         """Play now with a stand-in player: returns what it was asked to play."""
         played = []
 
-        def play(entries, exe=None, wid=None, extra=()):
+        def play(entries, exe=None, wid=None, extra=(), start_at=None):
             played.append((entries, exe, wid))
+            self.started_at = start_at
             return FakeProc()
         with mock.patch.object(ui.cvplay, "player", lambda: Path("mpv.exe")), \
                 mock.patch.object(ui.cvplay, "play", play), \
                 mock.patch.object(ui.cvplay, "Remote", FakeRemote):
             self.app._play_from_review()
-            for _ in range(300):
+            for _ in range(1000):
                 self.app.update()
                 w = getattr(self.app, "watching", None)
                 if played and w is not None and w.remote is not None:
@@ -344,13 +345,62 @@ class OnTheReviewPage(unittest.TestCase):
         self.assertEqual(self.app.play_lbl.cget("text"), ui.PLAYING_SAID)
         self.assertEqual(self.app.page_name, "review", "the review stays open")
 
-    def test_it_plays_inside_the_window(self):
-        # the owner, 2026-11-14: "Play inside CleanView Play"
+    def test_its_own_window_that_closes_on_its_own(self):
+        # 1.0.13: "when i play a video but want to go back to [the program] i cant ... can we
+        # turn the player into an extension of the program so it cann be closed separately"
         entries, exe, wid = self.press_play()[0]
         w = self.app.watching
         self.assertEqual(wid, w.video.winfo_id(), "the player draws in the picture area")
-        self.assertEqual(w.winfo_toplevel(), self.app)
-        self.assertEqual(str(w.place_info().get("relwidth")), "1")   # covers the review
+        self.assertIs(w.winfo_toplevel(), w.win, "a window of its own")
+        self.assertIs(w.win.master, self.app, "CleanView Play's own")
+        self.assertIn("Sample Show S01E01 - CleanView Play", w.win.title())
+        w.close_window()                            # its X
+        self.app.update()
+        self.assertFalse(w.win.winfo_exists())
+        self.assertTrue(self.app.winfo_exists(), "the program stays open")
+        self.assertEqual(self.app.page_name, "review")
+        self.assertIsNone(self.app.watching)
+
+    def test_the_window_comes_up_at_once_saying_so(self):
+        # 1.0.13: "when i make changes ... and then hit play ... it doesn't say anything. so it
+        # appears the player froze"
+        gate = threading.Event()
+        real = cvplay.entry
+
+        def slow(*a, **k):
+            gate.wait(5)                    # working out the new ticks
+            return real(*a, **k)
+        with mock.patch.object(ui.cvplay, "entry", slow), \
+                mock.patch.object(ui.cvplay, "player", lambda: Path("mpv.exe")), \
+                mock.patch.object(ui.cvplay, "play", lambda *a, **k: FakeProc()), \
+                mock.patch.object(ui.cvplay, "Remote", FakeRemote):
+            self.app._play_from_review()
+            self.app.update()
+            w = self.app.watching
+            self.assertIsNotNone(w)
+            self.assertEqual(w.time_lbl.cget("text"), "Getting it ready to play\u2026")
+            gate.set()
+            for _ in range(1000):
+                self.app.update()
+                if w.remote is not None:
+                    break
+                self.app.after(10)
+            self.assertEqual(w.time_lbl.cget("text"), "Opening\u2026")
+
+    def test_play_now_again_carries_on_from_the_same_spot(self):
+        self.press_play()
+        w = self.app.watching
+        w.win.geometry("700x500+40+50")
+        self.app.update()
+        w.remote.state.update({"time-pos": 42.5, "playlist-pos": 0, "duration": 95.0})
+        self.run_ticks(1)
+        for v, j, sc in self.app.scene_vars:     # a tick changed while it plays
+            v.set(sc["s"] == 60.0)
+        played = self.press_play()
+        self.assertTrue(w.remote.closed, "the old player closed")
+        self.assertEqual(self.started_at, (0, 42.5))
+        self.assertEqual(played[0][0][0]["skips"], [[60.0, 64.0]])
+        self.assertTrue(self.app.watching.win.geometry().startswith("700x500"))
 
     def test_big_simple_buttons(self):
         # the owner, 2026-11-14: "Simpler, bigger buttons"
@@ -403,7 +453,7 @@ class OnTheReviewPage(unittest.TestCase):
         self.press_play()
         w = self.app.watching
         asked = []
-        with mock.patch.object(self.app, "attributes", lambda *a: asked.append(a)):
+        with mock.patch.object(w.win, "attributes", lambda *a: asked.append(a)):
             w._do("fullscreen")
             self.assertTrue(w.full)
             self.assertIn("Leave", w.full_btn.cget("text"))
@@ -480,14 +530,14 @@ class OnTheReviewPage(unittest.TestCase):
         # long just to say a file is there
         where = []
 
-        def play(entries, exe=None, wid=None, extra=()):
+        def play(entries, exe=None, wid=None, extra=(), start_at=None):
             where.append(threading.current_thread() is threading.main_thread())
             return FakeProc()
         with mock.patch.object(ui.cvplay, "player", lambda: Path("mpv.exe")), \
                 mock.patch.object(ui.cvplay, "play", play), \
                 mock.patch.object(ui.cvplay, "Remote", FakeRemote):
             self.app._play_from_review()
-            for _ in range(300):
+            for _ in range(1000):
                 self.app.update()
                 w = getattr(self.app, "watching", None)
                 if w is not None and w.remote is not None:
@@ -499,7 +549,7 @@ class OnTheReviewPage(unittest.TestCase):
         # Stop pressed while it's still starting: the player that turns up is closed
         gate, made = threading.Event(), []
 
-        def play(entries, exe=None, wid=None, extra=()):
+        def play(entries, exe=None, wid=None, extra=(), start_at=None):
             gate.wait(5)
             made.append(FakeProc())
             return made[-1]
@@ -507,7 +557,7 @@ class OnTheReviewPage(unittest.TestCase):
                 mock.patch.object(ui.cvplay, "play", play), \
                 mock.patch.object(ui.cvplay, "Remote", FakeRemote):
             self.app._play_from_review()
-            for _ in range(300):
+            for _ in range(1000):
                 self.app.update()
                 if getattr(self.app, "watching", None) is not None:
                     break
@@ -515,7 +565,12 @@ class OnTheReviewPage(unittest.TestCase):
             self.app.watching._do("stop")
             self.assertIsNone(self.app.watching)
             gate.set()
-            for _ in range(100):
+            for _ in range(1000):           # up to 10 s on a busy PC
+                self.app.update()
+                if made:
+                    break
+                self.app.after(10)
+            for _ in range(20):
                 self.app.update()
                 self.app.after(10)
         self.assertEqual(len(made), 1)
@@ -584,7 +639,7 @@ class OnTheReviewPage(unittest.TestCase):
                 mock.patch.object(ui.messagebox, "showerror",
                                   lambda t, m, **k: said.append(m)):
             self.app._play_from_review()
-            for _ in range(200):
+            for _ in range(1000):
                 self.app.update()
                 if said:
                     break
@@ -632,7 +687,7 @@ class JustWatching(unittest.TestCase):
     def watch(self, paths, answer=None):
         played, asked = [], []
 
-        def play(entries, exe=None, wid=None, extra=()):
+        def play(entries, exe=None, wid=None, extra=(), start_at=None):
             played.append(entries)
             return FakeProc()
 
@@ -644,7 +699,7 @@ class JustWatching(unittest.TestCase):
                 mock.patch.object(ui.cvplay, "Remote", FakeRemote), \
                 mock.patch.object(ui.messagebox, "askyesnocancel", ask):
             self.app.watch_files(paths)
-            for _ in range(300):
+            for _ in range(1000):
                 self.app.update()
                 w = getattr(self.app, "watching", None)
                 if played and w is not None and w.remote is not None:
@@ -683,7 +738,7 @@ class JustWatching(unittest.TestCase):
             self.assertIsNotNone(w, "the screen is up before the check is done")
             self.assertEqual(w.time_lbl.cget("text"), "Opening…")
             gate.set()
-            for _ in range(300):
+            for _ in range(1000):
                 self.app.update()
                 if w.remote is not None:
                     break
@@ -868,7 +923,7 @@ class CleanedBefore(unittest.TestCase):
                        if tree.item(i)["values"][0] == "Castle S02E06")
             tree.selection_set(row)
             tree.event_generate("<Return>")
-            for _ in range(200):
+            for _ in range(1000):
                 self.app.update()
                 if asked:
                     break
@@ -893,7 +948,7 @@ class CleanedBefore(unittest.TestCase):
                        if tree.item(i)["values"][0] == "Castle S02E06")
             tree.selection_set(row)
             tree.event_generate("<Return>")
-            for _ in range(200):
+            for _ in range(1000):
                 self.app.update()
                 if said:
                     break
@@ -942,7 +997,7 @@ class CleanedBefore(unittest.TestCase):
                 mock.patch.object(ui.messagebox, "askyesnocancel",
                                   lambda *a, **k: asked.append(a)):
             self.app.watch_files([str(self.video)], clean=True)
-            for _ in range(300):
+            for _ in range(1000):
                 self.app.update()
                 w = self.app.watching
                 if played and w is not None and w.remote is not None:
@@ -1219,6 +1274,10 @@ class Script(unittest.TestCase):
         for prop in ('"af"', '"vf"', '"aid"', '"time-pos"', '"absolute+exact"'):
             self.assertIn(prop, lua)
 
+    def test_carries_on_from_a_spot(self):
+        lua = cvplay.SCRIPT.read_text(encoding="utf8")
+        self.assertIn("current.start", lua)
+
     def test_its_own_subtitles_when_just_watching(self):
         lua = cvplay.SCRIPT.read_text(encoding="utf8")
         self.assertIn("current.own_subs", lua)
@@ -1391,6 +1450,20 @@ class RealPlayer(unittest.TestCase):
         r.send("script-message", "cvplay-subs")
         self.assertTrue(until(lambda: r.state.get("sid") in (False, "no")))
 
+    def test_carrying_on_from_the_same_spot(self):
+        e = cvplay.entry(self.sample(scenes=[{"s": 6.0, "e": 8.0, "cut": True}]))
+        proc = cvplay.play([e], cvplay.player(), start_at=(0, 4.0),
+                           extra=["--vo=null", "--ao=null", "--force-window=no"])
+        r = cvplay.Remote(proc.pipe, proc)
+        self.addCleanup(r.close)
+        self.assertTrue(r.ready.wait(15))
+        stop = time.monotonic() + 8
+        while time.monotonic() < stop and not (r.state.get("time-pos") or 0) >= 4.0:
+            time.sleep(0.05)
+        t = r.state.get("time-pos") or 0
+        self.assertGreaterEqual(t, 4.0)
+        self.assertLess(t, 5.5, "from there, not from the start")
+
     def test_just_watching_has_its_own_subtitles(self):
         # a video played as it is (nothing muted): its own subtitle track there to turn on
         video = self.tmp / "with subs.mkv"
@@ -1464,7 +1537,7 @@ class RealPlayer(unittest.TestCase):
         self.assertTrue(pump(lambda: user32.GetWindow(wintypes.HWND(area), 5)), "the picture")
         child = user32.GetWindow(wintypes.HWND(area), 5)          # GW_CHILD
         self.assertTrue(pump(lambda: size(child) == size(area)), (size(child), size(area)))
-        root.geometry("640x480")
+        w.win.geometry("640x480")
         self.assertTrue(pump(lambda: size(area)[0] < 700 and size(child) == size(area)),
                         (size(child), size(area)))
         w._do("pause")

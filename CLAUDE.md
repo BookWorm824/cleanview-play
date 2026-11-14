@@ -151,6 +151,18 @@ touch", then "keeping clean view as a save program only add a play now feature f
   sets `st["_view"]`), else analysis.json's mtime. Never: the open review's views, the
   session's ("Pick up where I left off"), or one with `queue.lock`. `find_again` checks only
   drive letters that are fixed or removable (`drive_letters`: network drives can hang).
+- The player's own window (1.0.13; the owner: "when i play a video but want to go back to
+  [the program] i cant, i have to exit out which closes the whole program. can we turn the
+  player into an extension of the program so it cann be closed separately", and "when i make
+  changes ... then hit play ... it doesn't say anything. so it appears the player froze").
+  `Watching` is now a Frame in its own `tk.Toplevel` (`self.win`, master = App), first the size
+  and place of the program's window; keys and the wheel are bound on that window only (the
+  wheel returns "break"); its X → `close_window` → `finish` (only the player closes). Play now
+  creates the window at once with "Getting it ready to play…", then `start` says "Opening…".
+  Pressed again while one plays: `Watching.where()` gives (video, time, normal geometry, full);
+  the new window keeps the size/place/full screen, and for the same videos the player carries
+  on from that spot (`cvplay.play(start_at=)`: `--playlist-start` and the entry's "start",
+  which cvplay.lua seeks to once on file-loaded).
 - The review page: "▶ Play now" instead of "Save clean copy"; the save folder / size row
   is gone; the review stays open (change a tick, play again) and is saved for "Pick up
   where I left off". `_gather_choices()` is the old first half of `_save_from_review()`.

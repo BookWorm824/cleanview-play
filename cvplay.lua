@@ -147,3 +147,13 @@ mp.register_script_message("cvplay-subs", function()
         mp.set_property("sid", "no")
     end
 end)
+
+-- Carry on from where it was (1.0.13): Play now pressed again after a tick was changed, with
+-- the video at that spot ("start" in its part of the list); a spot inside a cut is jumped past
+mp.register_event("file-loaded", function()
+    if current and current.start then
+        local t = current.start
+        current.start = nil
+        mp.commandv("seek", tostring(t), "absolute+exact")
+    end
+end)

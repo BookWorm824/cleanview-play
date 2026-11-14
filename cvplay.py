@@ -534,10 +534,11 @@ def command(exe, list_path, paths, wid=None, pipe=None):
     return cmd + ["--"] + [str(p) for p in paths]
 
 
-def play(entries, exe=None, wid=None, extra=()):
+def play(entries, exe=None, wid=None, extra=(), start_at=None):
     """Play these videos one after another with their mutes and skips, inside the window `wid`
-    if given (extra: more mpv options, for tests). Returns the process; `proc.pipe` is the
-    name to reach it by (see Remote)."""
+    if given (extra: more mpv options, for tests). start_at=(which video, seconds): carry on
+    from there (Play now pressed again after changing ticks, 1.0.13). Returns the process;
+    `proc.pipe` is the name to reach it by (see Remote)."""
     exe = exe or player()
     if exe is None:
         raise PlayError("The video player isn't here yet.")
@@ -545,13 +546,18 @@ def play(entries, exe=None, wid=None, extra=()):
     if missing:
         raise Moved(f"Can't find {Path(missing[0]).name}. Was it moved or renamed? Check it "
                     "again from where it is now.")
+    first = 0
+    if start_at:
+        first = min(max(0, int(start_at[0])), len(entries) - 1)
+        entries = [dict(e) for e in entries]
+        entries[first]["start"] = round(max(0.0, float(start_at[1])), 3)   # cvplay.lua
     list_path = write_list(entries)
     stop()
     pipe = pipe_name()
     env = dict(os.environ, **{LIST_ENV: str(list_path), REMOTE_ENV: "1"})
     cmd = command(exe, list_path, [e["path"] for e in entries], wid, pipe)
     at = cmd.index("--")
-    cmd[at:at] = list(extra)
+    cmd[at:at] = list(extra) + ([f"--playlist-start={first}"] if first else [])
     log = open(list_path.parent / "player.txt", "w", encoding="utf8", errors="replace")
     try:
         proc = subprocess.Popen(cmd, env=env, stdin=subprocess.DEVNULL, stdout=log,

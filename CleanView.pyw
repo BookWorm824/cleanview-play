@@ -86,7 +86,8 @@ NEXT_TO_VIDEO = "A “Clean” folder next to the video"
 PLAY_SAID = "Plays the original with what's ticked muted and cut. Nothing is saved."
 PLAY_SAID_MULTI = ("Plays them one after another with what's ticked muted and cut. "
                    "Nothing is saved.")
-PLAYING_SAID = "Playing. Press Stop under the picture to come back here."
+PLAYING_SAID = ("Playing in the player's window. Change a tick and press Play now again to "
+                "carry on from the same spot with the change.")
 WATCHED_SAID = "Change a tick and press Play now to watch it again with the change."
 # just watching (1.0.9; the owner: "so someone could just open a movie and watch without
 # cleaning", "like vlc where it plays many types of files")
@@ -413,22 +414,41 @@ def clock(secs):
 
 
 class Watching(tk.Frame):
-    """Play now, inside the window (the owner, 2026-11-14: "Play inside CleanView Play",
-    "Simpler, bigger buttons", "less ability to get info on the screen", and mpv's subtitle
-    button "should be gone"). It covers the review page while the videos play: the picture,
-    and under it the title, the time (of what's seen: cuts left out), a bar to jump with, and
-    big buttons. Stop, or the end of the last video, uncovers the review just as it was.
-    The player (cvplay) has none of its own controls; keys and clicks on the picture come
-    back here (`Remote.keys`), so everything goes through `_do`."""
+    """The player's window (the owner, 2026-11-14: "Play inside CleanView Play", "Simpler,
+    bigger buttons", "less ability to get info on the screen", mpv's subtitle button "should
+    be gone"; then, 1.0.13: "when i play a video but want to go back to [the program] i cant
+    ... can we turn the player into an extension of the program so it cann be closed
+    separately"). A window of CleanView Play's own: the picture, and under it the title, the
+    time (of what's seen: cuts left out), a bar to jump with, and big buttons. The review page
+    stays open and usable beside it; closing this window (its X, or Stop) closes only the
+    player. The player (cvplay) has none of its own controls; keys and clicks on the picture
+    come back here (`Remote.keys`), so everything goes through `_do`."""
     STEP = 10                   # seconds back or forward, of what's seen
     extra = ()                  # more player options (tests: no sound)
     KEYMAP = {"<space>": "pause", "<Left>": "back", "<Right>": "forward", "<Up>": "louder",
               "<Down>": "quieter", "<f>": "fullscreen", "<F>": "fullscreen", "<Escape>": "esc",
               "<c>": "subs"}
 
-    def __init__(self, app, entries, on_done):
-        super().__init__(app, bg=PLAYER_BG)
+    def __init__(self, app, entries, on_done, geometry=None, full=False, status=None):
+        win = self.win = tk.Toplevel(app)
+        win.configure(bg=PLAYER_BG)
+        win.title(f"{entries[0].get('title', '')} - CleanView Play")
+        try:
+            set_icon(win)
+        except Exception:
+            pass
+        win.protocol("WM_DELETE_WINDOW", self.close_window)
+        if not geometry:                # where the program's window is, the same size
+            app.update_idletasks()
+            geometry = (f"{max(640, app.winfo_width())}x{max(480, app.winfo_height())}"
+                        f"+{app.winfo_rootx()}+{app.winfo_rooty()}")
+        win.geometry(geometry)
+        win.minsize(560, 420)
+        self._normal_geom = geometry
+        super().__init__(win, bg=PLAYER_BG)
+        self.pack(fill="both", expand=True)
         self.app, self.entries, self.on_done = app, entries, on_done
+        self.status = status or "Opening\u2026"
         self.remote = self.proc = None
         self.played = False         # the picture started (the player said where it was)
         self.full = False
@@ -438,21 +458,21 @@ class Watching(tk.Frame):
         self._loud = 0.0            # when the sound was last made louder or quieter
         self._moved = (time.monotonic(), None)
         self._tick_id = None
-        self.place(x=0, y=0, relwidth=1, relheight=1)
-        self.lift()
         self.bar = tk.Frame(self, bg=PLAYER_BAR)
         self.bar.pack(side="bottom", fill="x")
         self._bar_shown = True
         self.video = tk.Frame(self, bg=PLAYER_BG)
         self.video.pack(side="top", fill="both", expand=True)
         self._build_bar()
-        self._saved_keys = {seq: app.bind(seq) for seq in self.KEYMAP}
-        for seq, what in self.KEYMAP.items():
-            app.bind(seq, lambda e, w=what: self._do(w))
-        self._saved_wheel = app.tk.call("bind", "all", "<MouseWheel>")
-        app.bind_all("<MouseWheel>", lambda e: self._do("louder" if e.delta > 0 else "quieter"))
+        for seq, what in self.KEYMAP.items():          # keys in this window only
+            win.bind(seq, lambda e, w=what: self._do(w))
+        win.bind("<MouseWheel>", lambda e: (
+            self._do("louder" if e.delta > 0 else "quieter"), "break")[1])
         self.bind("<Destroy>", self._destroyed, add="+")
-        self.focus_set()
+        if full:
+            win.after_idle(lambda: self._full(True))
+        win.lift()
+        win.focus_force()
 
     # ---------- what's under the picture ----------
     def _build_bar(self):
@@ -462,7 +482,7 @@ class Watching(tk.Frame):
         self.title_lbl = tk.Label(top, text=self.entries[0].get("title", ""), bg=PLAYER_BAR,
                                   fg=PLAYER_INK, font=(FONT, 12, "bold"), anchor="w")
         self.title_lbl.pack(side="left", fill="x", expand=True)
-        self.time_lbl = tk.Label(top, text="Opening\u2026", bg=PLAYER_BAR, fg=PLAYER_DIM,
+        self.time_lbl = tk.Label(top, text=self.status, bg=PLAYER_BAR, fg=PLAYER_DIM,
                                  font=(FONT, 12), anchor="e")
         self.time_lbl.pack(side="right")
         # clean subtitles, off unless turned on (2026-11-14), for a video that has them
@@ -539,7 +559,11 @@ class Watching(tk.Frame):
             self.hold = (frac, time.monotonic() + 0.8)
 
     # ---------- playing ----------
-    def start(self, exe, on_error=None):
+    def close_window(self):
+        """The window's X: only the player closes; CleanView Play stays open."""
+        self.finish()
+
+    def start(self, exe, on_error=None, start_at=None):
         """Start the player inside the picture area. Checking the files are there (a sleeping
         drive can take seconds to wake) and starting the player are done in the background
         (1.0.6: still "not responding" for several seconds when it opened); on_error(ex, tb)
@@ -547,11 +571,14 @@ class Watching(tk.Frame):
         self.update_idletasks()
         wid = self.video.winfo_id()
         self.started = time.monotonic()
+        self.time_lbl.config(text="Opening\u2026")
+        self.win.title(f"{self.entries[0].get('title', '')} - CleanView Play")
         self.picture_after = None       # seconds from Play now to the picture (problem notes)
 
         def go():
             try:
-                proc = cvplay.play(self.entries, exe, wid=wid, extra=self.extra)
+                proc = cvplay.play(self.entries, exe, wid=wid, extra=self.extra,
+                                   start_at=start_at)
                 remote = cvplay.Remote(proc.pipe, proc)
             except Exception as ex:
                 tb = traceback.format_exc()
@@ -616,9 +643,11 @@ class Watching(tk.Frame):
             self.remote.send("script-message", "cvplay-subs")      # cvplay.lua
 
     def _full(self, on):
+        if on and not self.full:
+            self._normal_geom = self.win.geometry()     # back to this when it leaves
         self.full = on
         try:
-            self.app.attributes("-fullscreen", on)
+            self.win.attributes("-fullscreen", on)
         except tk.TclError:
             pass
         self.full_btn.config(text="⛶  Leave full screen" if on else "⛶  Full screen")
@@ -662,6 +691,9 @@ class Watching(tk.Frame):
         self.time_lbl.config(text=said)
         n, pos = len(self.entries), st.get("playlist-pos") or 0
         self.title_lbl.config(text=v.get("title", "") + (f"   ({pos + 1} of {n})" if n > 1 else ""))
+        name = f"{v.get('title', '')} - CleanView Play"
+        if self.win.title() != name:
+            self.win.title(name)
         self.pause_btn.config(text="▶  Play" if st.get("pause") else "❚❚  Pause")
         has_subs = bool(st.get("user-data/cvplay/subs"))       # cvplay.lua says
         if has_subs != bool(self.subs_btn.winfo_manager()):
@@ -701,20 +733,25 @@ class Watching(tk.Frame):
         self.closing = True
         if self._tick_id:
             self.after_cancel(self._tick_id)
-        if self.full:
-            try:
-                self.app.attributes("-fullscreen", False)
-            except tk.TclError:
-                pass
-        for seq, was in self._saved_keys.items():
-            self.app.bind(seq, was)
-        self.app.tk.call("bind", "all", "<MouseWheel>", self._saved_wheel)
         if self.remote is not None:     # asked to close, then made to (a moment at most)
             threading.Thread(target=self.remote.close, daemon=True, name="player close").start()
         elif self.proc is not None and self.proc.poll() is None:
             self.proc.terminate()
-        self.destroy()
+        try:
+            self.win.destroy()
+        except tk.TclError:
+            pass
         self.on_done(self.played, ended)
+
+    def where(self):
+        """(which video, where in it, window size and place, full screen) to carry on from
+        if Play now is pressed again (1.0.13), or None before the picture has come up."""
+        st = self._state()
+        t = st.get("time-pos")
+        if not self.played or t is None:
+            return None
+        return (st.get("playlist-pos") or 0, float(t),
+                self._normal_geom if self.full else self.win.geometry(), self.full)
 
     def _destroyed(self, e):
         """The window closing while it plays: the player goes too, straight away."""
@@ -1075,9 +1112,6 @@ class App(tk.Tk):
         X = self._px
         self.page = tk.Frame(self, bg=BG)
         self.page.pack(fill="both", expand=True, padx=X(36), pady=(X(24), X(16)))
-        w = getattr(self, "watching", None)
-        if w is not None and w.winfo_exists():
-            self.after_idle(w.lift)     # a video playing stays over a page built meanwhile
         self.footer = tk.Frame(self.page, bg=BG)
         self.footer.pack(side="bottom", fill="x", pady=(X(10), 0))
         tk.Frame(self.footer, bg=LINE, height=1).pack(side="top", fill="x", pady=(0, X(12)))
@@ -4219,6 +4253,18 @@ class App(tk.Tk):
         sess = self._session_info(good)
         picks = [(j["analysis"], list(j["cuts"]), list(j["lines"]), list(j["words"]),
                   list(j["quiet"])) for j in good]
+        # Pressed again while it plays: the new player carries on from the same spot, in the
+        # same window size and place (1.0.13; ticks can be changed while the video plays now)
+        old = getattr(self, "watching", None)
+        resume, geom, full = None, None, False
+        if old is not None and old.winfo_exists():
+            spot = old.where()
+            same = [e["path"] for e in old.entries] == [str(x[0]["path"]) for x in picks]
+            if spot:
+                idx, t, geom, full = spot
+                if same:
+                    resume = (idx, t)
+            old.finish()
 
         def say(text):
             lbl = getattr(self, "play_lbl", None)
@@ -4227,22 +4273,21 @@ class App(tk.Tk):
 
         def failed(ex, details=None):
             save_details(details or traceback.format_exc())
+            if w.winfo_exists():
+                w.finish()
             why = str(ex) if isinstance(ex, cvplay.PlayError) else plain_error(ex)
             say(PLAY_SAID)
             messagebox.showerror("CleanView Play", f"Couldn't play it. {why}", parent=self)
 
-        def watch(entries, exe):    # here, in the window (2026-11-14), not a window of its own
-            if self.page_name != "review":
+        def watch(entries, exe):
+            if w.closing:               # its window was closed meanwhile
                 return
-            old = getattr(self, "watching", None)
-            if old is not None and old.winfo_exists():
-                old.finish()
-            self.watching = Watching(self, entries, done)
+            w.entries = entries
             try:
-                self.watching.start(exe, on_error=failed)
+                w.start(exe, on_error=failed, start_at=resume)
                 say(PLAYING_SAID)
             except Exception as ex:
-                self.watching.finish()
+                w.finish()
                 failed(ex)
 
         def done(played, ended):
@@ -4265,6 +4310,7 @@ class App(tk.Tk):
             except Exception as ex:
                 tb = traceback.format_exc()
                 self.q.put(("call", lambda ex=ex: (save_details(tb), say(PLAY_SAID),
+                                                   w.winfo_exists() and w.finish(),
                                                    messagebox.showerror(
                     "CleanView Play", f"Couldn't get it ready to play. {plain_error(ex)}",
                     parent=self))))
@@ -4279,6 +4325,11 @@ class App(tk.Tk):
                 tb = traceback.format_exc()
                 self.q.put(("call", lambda ex=ex: failed(ex, tb)))
         say("Getting it ready to play…")
+        # the player's window straight away, saying so, while the new ticks are worked out
+        # (1.0.13: "it doesn't say anything. so it appears the player froze")
+        self.watching = w = Watching(
+            self, [cvplay.plain_entry(x[0]["path"]) for x in picks], done, geometry=geom,
+            full=full, status="Getting it ready to play\u2026")
         threading.Thread(target=go, daemon=True, name="play now").start()
         self._watch_play_freeze(len(picks))
 
