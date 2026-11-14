@@ -9,6 +9,7 @@ import os
 import queue
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -665,6 +666,36 @@ class JustWatching(unittest.TestCase):
         self.assertEqual(self.app.page_name, "setup")
         self.assertIsNotNone(self.app.watching)
 
+    def test_the_player_screen_comes_up_at_once(self):
+        # 1.0.10: "when i chose a file it also was very slow opening it seemed before playing".
+        # Looking for a past cleaning (it reads the drive) is done in the background, with the
+        # player's screen up and saying "Opening…" meanwhile.
+        gate, where = threading.Event(), []
+
+        def slow(path, views=None):
+            where.append(threading.current_thread() is threading.main_thread())
+            gate.wait(5)                    # a drive waking up
+            return None
+        with mock.patch.object(ui.cvplay, "cleaned_before", slow),                 mock.patch.object(ui.cvplay, "player", lambda: Path("mpv.exe")),                 mock.patch.object(ui.cvplay, "play", lambda *a, **k: FakeProc()),                 mock.patch.object(ui.cvplay, "Remote", FakeRemote):
+            self.app.watch_files([str(self.video)])
+            self.app.update()
+            w = self.app.watching
+            self.assertIsNotNone(w, "the screen is up before the check is done")
+            self.assertEqual(w.time_lbl.cget("text"), "Opening…")
+            gate.set()
+            for _ in range(300):
+                self.app.update()
+                if w.remote is not None:
+                    break
+                self.app.after(10)
+            w._tick()
+            self.assertEqual(w.time_lbl.cget("text"), "Opening…", "until the picture")
+            w.remote.state["time-pos"] = 1.0
+            w.remote.state["duration"] = 60.0
+            w._tick()
+            self.assertEqual(w.time_lbl.cget("text"), "0:01 / 1:00")
+        self.assertEqual(where, [False])
+
     def test_cleaned_before_can_play_clean(self):
         self.cleaned(self.video)
         played, asked = self.watch([str(self.video)], answer=True)
@@ -768,6 +799,61 @@ class OpenWith(unittest.TestCase):
             launcher.hand_over([str(video), str(support.SANDBOX / "not there.mkv"),
                                 launcher.APP_PART])
         self.assertEqual(json.loads(out.read_text())["paths"], [str(video)])
+
+
+class OpeningBox(unittest.TestCase):
+    """1.0.9 (the owner, after an update: "it didn't say anything to let me know what it was
+    doing", "could it have the little opening box that says the program like the others but
+    also its updating")."""
+    def load(self):
+        import importlib.machinery
+        import importlib.util
+        path = str(support.ROOT / "launcher.pyw")
+        spec = importlib.util.spec_from_file_location(
+            "cv_launcher2", path, loader=importlib.machinery.SourceFileLoader("cv_launcher2", path))
+        lm = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(lm)
+        return lm
+
+    def boxed(self, env):
+        lm = self.load()
+        seen = {"said": [], "title": [], "top": []}
+
+        class Box(tk.Tk):
+            def title(self, *a):
+                if a:
+                    seen["title"].append(a[0])
+                return super().title(*a)
+
+            def attributes(self, *a):
+                if a[:1] == ("-topmost",) and len(a) > 1:
+                    seen["top"].append(a[1])
+                return super().attributes(*a)
+
+        real_var = tk.StringVar
+
+        def var(*a, **k):
+            seen["said"].append(k.get("value"))
+            return real_var(*a, **k)
+        child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(1)"])
+        with mock.patch.dict(os.environ, env), mock.patch.object(tk, "Tk", Box),                 mock.patch.object(tk, "StringVar", var):
+            lm.splash(child)
+        child.wait()
+        return seen
+
+    def test_on_top_and_named_as_opening(self):
+        seen = self.boxed({"CLEANVIEW_UPDATED": ""})
+        self.assertEqual(seen["title"], ["Opening CleanView Play"])
+        self.assertEqual(seen["top"], [True])
+        self.assertEqual(seen["said"], ["This can take a few seconds."])
+
+    def test_says_it_was_just_updated(self):
+        seen = self.boxed({"CLEANVIEW_UPDATED": "CleanView Play was updated to version 9.9.9."})
+        self.assertEqual(seen["said"], ["Updated to version 9.9.9."])
+
+    def test_says_its_updating_while_it_downloads(self):
+        src = (support.ROOT / "launcher.pyw").read_text(encoding="utf8")
+        self.assertIn("opening(f\"Updating to version {remote['version']}\\u2026\")", src)
 
 
 class FakeReg:

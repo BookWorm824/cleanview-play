@@ -112,6 +112,20 @@ touch", then "keeping clean view as a save program only add a play now feature f
   `<own exe or pythonw> launcher.pyw "%1"`. `launcher.hand_over` writes `open_these.json` and
   the window's `_check_open_these` (every 0.7 s) plays what's in it if it's under 2 minutes old.
   Tests use a stand-in registry (`FakeReg`); none touch the real one.
+- The opening box after an update (1.0.10; the owner: "it didn't say anything to let me know
+  what it was doing", "could it have the little opening box that says the program like the
+  others but also its updating"): `_update_done` calls AllowSetForegroundWindow(ASFW_ANY)
+  before starting the launcher again (the old window goes, and Windows otherwise keeps a box
+  started in the background behind the next window: most likely why she saw only the blue
+  busy ring). `launcher.splash` is titled "Opening CleanView Play" (CleanListen's way), is
+  topmost, lifts itself, and says "Updated to version X." when `CLEANVIEW_UPDATED` says so;
+  while the launcher downloads, `opening()` says "Updating to version X…".
+- Watch a video opens at once (1.0.10; the owner: "when i chose a file it also was very slow
+  opening it seemed before playing", "it was an external drive"): `watch_files` puts the
+  player's screen up straight away ("Opening…" in the time until the picture comes up), and
+  `cvplay.cleaned_before` (reads the file's size: a sleeping drive spins up first), getting the
+  player and `clean_entry` run in background threads; "play it clean?" is asked over the
+  player's screen. The drive's own spin-up can't be made faster; it's shown now.
 - The review page: "▶ Play now" instead of "Save clean copy"; the save folder / size row
   is gone; the review stays open (change a tick, play again) and is saved for "Pick up
   where I left off". `_gather_choices()` is the old first half of `_save_from_review()`.

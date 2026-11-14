@@ -462,8 +462,8 @@ class Watching(tk.Frame):
         self.title_lbl = tk.Label(top, text=self.entries[0].get("title", ""), bg=PLAYER_BAR,
                                   fg=PLAYER_INK, font=(FONT, 12, "bold"), anchor="w")
         self.title_lbl.pack(side="left", fill="x", expand=True)
-        self.time_lbl = tk.Label(top, text="", bg=PLAYER_BAR, fg=PLAYER_DIM, font=(FONT, 12),
-                                 anchor="e")
+        self.time_lbl = tk.Label(top, text="Opening\u2026", bg=PLAYER_BAR, fg=PLAYER_DIM,
+                                 font=(FONT, 12), anchor="e")
         self.time_lbl.pack(side="right")
         # clean subtitles, off unless turned on (2026-11-14), for a video that has them
         self.subs_btn = self._button(top, "Subtitles: Off", "subs", show=False)
@@ -655,6 +655,8 @@ class Watching(tk.Frame):
             frac = held
         self._draw_pos(frac)
         said = f"{clock(frac * total)} / {clock(total)}" if total else ""
+        if not self.played:
+            said = "Opening\u2026"          # until the picture comes up
         if time.monotonic() - self._loud < 2 and st.get("volume") is not None:
             said = f"Volume {round(st['volume'])}%     " + said
         self.time_lbl.config(text=said)
@@ -959,6 +961,15 @@ class App(tk.Tk):
         if self.page_name == "review":
             env["CLEANVIEW_RESUME"] = "1"
         launcher = Path(__file__).resolve().parent / "launcher.pyw"
+        # the "Opening" box of the copy starting now may come to the front: this window is
+        # going, and Windows otherwise keeps a box started in the background behind whatever
+        # comes up next (1.0.9: after an update it "didn't say anything")
+        if os.name == "nt":
+            try:
+                import ctypes
+                ctypes.windll.user32.AllowSetForegroundWindow(-1)      # ASFW_ANY
+            except Exception:
+                pass
         subprocess.Popen([sys.executable, str(launcher)], env=env,
                          cwd=str(launcher.parent))
         self.destroy()
@@ -4320,36 +4331,11 @@ class App(tk.Tk):
         old = getattr(self, "watching", None)
         if old is not None and old.winfo_exists():
             old.finish()
-        before = {}
-        for x in paths:
-            try:
-                st = cvplay.cleaned_before(x, APP_DATA / "views")
-            except OSError:             # gone, or its drive unplugged: said when it plays
-                st = None
-            if st:
-                before[x] = st
-        clean = False
-        if before:
-            one = len(before) == 1
-            chime()
-            ans = messagebox.askyesnocancel("CleanView Play", CLEANED_BEFORE_ASK.format(
-                what=f"“{Path(next(iter(before))).stem}”" if one else
-                f"{len(before)} of these", it="it" if one else "them",
-                it_is="it is" if one else "they are"), parent=self)
-            if ans is None:
-                return
-            clean = ans
-        try:
-            entries = [cvplay.clean_entry(before[x]) if clean and x in before
-                       else cvplay.plain_entry(x) for x in paths]
-        except Exception as ex:
-            save_details(traceback.format_exc())
-            messagebox.showerror("CleanView Play", f"Couldn't get it ready to play. "
-                                 f"{plain_error(ex)}", parent=self)
-            return
 
         def failed(ex, details=None):
             save_details(details or traceback.format_exc())
+            if w.winfo_exists():
+                w.finish()
             why = str(ex) if isinstance(ex, cvplay.PlayError) else plain_error(ex)
             messagebox.showerror("CleanView Play", f"Couldn't play it. {why}", parent=self)
 
@@ -4363,27 +4349,70 @@ class App(tk.Tk):
                                      "can't play, or damaged. The details are saved in a "
                                      "file, for anyone helping you.", parent=self)
 
-        def watch(exe):
-            old = getattr(self, "watching", None)
-            if old is not None and old.winfo_exists():
-                old.finish()
-            self.watching = Watching(self, entries, done)
+        # The player's screen straight away, saying "Opening…" (1.0.10; the owner: "when i
+        # chose a file it also was very slow opening it seemed before playing"). Looking for a
+        # past cleaning reads the drive, which may have to wake up first, and the player may
+        # have to be fetched: both are done in the background meanwhile.
+        self.watching = w = Watching(self, [cvplay.plain_entry(x) for x in paths], done)
+        self._watch_play_freeze(len(paths))
+
+        def begin(entries, exe):
+            if w.closing:
+                return
+            if entries:
+                w.entries = entries
             try:
-                self.watching.start(exe, on_error=failed)
+                w.start(exe, on_error=failed)
             except Exception as ex:
-                self.watching.finish()
                 failed(ex)
 
+        def ready(before, exe):
+            if w.closing:               # Stop pressed meanwhile
+                return
+            if not before:
+                begin(None, exe)
+                return
+            one = len(before) == 1
+            chime()
+            ans = messagebox.askyesnocancel("CleanView Play", CLEANED_BEFORE_ASK.format(
+                what=f"“{Path(next(iter(before))).stem}”" if one else
+                f"{len(before)} of these", it="it" if one else "them",
+                it_is="it is" if one else "they are"), parent=self)
+            if ans is None:
+                w.finish()
+                return
+            if not ans:
+                begin(None, exe)
+                return
+
+            def make():                 # cleaning the subtitles can take a few seconds
+                try:
+                    entries = [cvplay.clean_entry(before[x]) if x in before
+                               else cvplay.plain_entry(x) for x in paths]
+                except Exception as ex:
+                    tb = traceback.format_exc()
+                    self.q.put(("call", lambda ex=ex: failed(ex, tb)))
+                    return
+                self.q.put(("call", lambda: begin(entries, exe)))
+            threading.Thread(target=make, daemon=True, name="watch clean").start()
+
         def go():
+            before = {}
+            for x in paths:
+                try:
+                    st = cvplay.cleaned_before(x, APP_DATA / "views")
+                except OSError:         # gone, or its drive unplugged: said when it plays
+                    st = None
+                if st:
+                    before[x] = st
             try:
                 exe = cvplay.player() or cvplay.get_player()
             except Exception as ex:
                 tb = traceback.format_exc()
                 self.q.put(("call", lambda ex=ex: failed(ex, tb)))
                 return
-            self.q.put(("call", lambda: watch(exe)))
+            self.q.put(("call", lambda: ready(before, exe)))
         threading.Thread(target=go, daemon=True, name="watch").start()
-        self._watch_play_freeze(len(entries))
 
     def _check_open_these(self):
         """Videos sent from File Explorer ("Open with CleanView Play"), now or while it was

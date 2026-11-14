@@ -450,7 +450,15 @@ def splash(child, most=SPLASH_MOST):
     import tkinter as tk
     from tkinter import ttk
     root = tk.Tk()
-    root.title(APP_NAME)
+    # not the program's own title, so it's never taken for the program's window (CleanListen's
+    # way); on top of other windows while it's up (1.0.9; the owner, after an update: "it
+    # didn't say anything to let me know what it was doing", "could it have the little opening
+    # box that says the program like the others but also its updating")
+    root.title(f"Opening {APP_NAME}")
+    try:
+        root.attributes("-topmost", True)
+    except Exception:
+        pass
     try:                # the logo for every window of this program, and for this one
         root.iconbitmap(default=str(HERE / "cleanview.ico"))
         root.iconbitmap(str(HERE / "cleanview.ico"))
@@ -460,7 +468,10 @@ def splash(child, most=SPLASH_MOST):
     root.resizable(False, False)
     tk.Label(root, text=f"Opening {APP_NAME}\u2026", bg="#FFFFFF", fg="#23211F",
              font=("Segoe UI", 14, "bold")).pack(padx=40, pady=(22, 4))
-    said = tk.StringVar(value="This can take a few seconds.")
+    # just updated from inside the program ("Update now"): say so while it opens again
+    done = os.environ.get("CLEANVIEW_UPDATED", "")
+    said = tk.StringVar(value=done.replace(f"{APP_NAME} was updated", "Updated")
+                        if " was updated to version " in done else "This can take a few seconds.")
     tk.Label(root, textvariable=said, bg="#FFFFFF", fg="#6D6862",
              font=("Segoe UI", 10)).pack(padx=40)
     bar = ttk.Progressbar(root, mode="indeterminate", length=260)
@@ -470,6 +481,11 @@ def splash(child, most=SPLASH_MOST):
     w, h = root.winfo_reqwidth(), root.winfo_reqheight()
     root.geometry(f"+{(root.winfo_screenwidth() - w) // 2}+"
                   f"{(root.winfo_screenheight() - h) // 2 - 40}")
+    try:
+        root.lift()
+        root.focus_force()
+    except Exception:
+        pass
     start = time.time()
     try:                       # CleanView's window may come to the front itself
         import ctypes
@@ -510,7 +526,7 @@ def update():
         remote = json.loads(r.read().decode("utf8"))
     if _ver(remote["version"]) <= _ver(local["version"]):
         return None
-    opening(f"Getting {APP_NAME} {remote['version']}\u2026")
+    opening(f"Updating to version {remote['version']}\u2026")
     # download everything first, check it, and only then swap files in
     staged = {}
     for name in remote["files"]:
