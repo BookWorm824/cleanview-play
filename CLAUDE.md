@@ -27,8 +27,14 @@ touch", then "keeping clean view as a save program only add a play now feature f
   Releasing: bump `version` (and `based_on` after a merge), commit as `BookWorm824
   <morganscorner93@gmail.com>`, `git push origin main` (never to `original`). The installer
   zip (`CleanView Play-Setup.zip`, the `installer/` files plus an `app/` folder of the files
-  in `version.json`) is made by hand for new installs. There's no `gh` on this PC; the repo
-  was made through GitHub's API with git's saved sign-in.
+  in `version.json`) is made by hand for new installs and attached to a GitHub release as
+  `CleanView-Play-Setup.zip` (first: v1.0.1, 2026-11-14, the owner: "Download link on
+  GitHub", for her MSI laptop). The link that always gets the newest one:
+  https://github.com/BookWorm824/cleanview-play/releases/latest/download/CleanView-Play-Setup.zip
+  An older zip still works (it installs, then updates itself), so a new release only needs
+  one when the installer changes. There's no `gh` on this PC; the repo and the release were
+  made through GitHub's API with git's saved sign-in. To install on this PC, start the .bat
+  through `explorer.exe` (a tool's own process writes AppData into Claude's sandbox).
 - `version.json` has its own `version` (1.0.0 onwards) and `based_on`, the CleanView
   version its finding comes from; bump `based_on` when merging a CleanView release.
   `engine.app_version()` says "Play 1.0.0 / 1.18.90", so reports sent to the shared inbox
