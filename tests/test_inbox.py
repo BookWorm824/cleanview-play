@@ -65,9 +65,20 @@ class Send(unittest.TestCase):
         learn.send(self.file, "learned")
         (kind, msg), = Inbox.got
         self.assertEqual(kind, "application/json")
-        self.assertEqual(msg, {"app": "CleanView Play", "kind": "learned",
+        self.assertEqual(msg, {"app": "CleanView", "from": "CleanView Play", "kind": "learned",
                                "name": "CleanView learned 2026-10-28.json",
                                "data": {"date": "2026-10-28", "shows": {"castle": {}}}})
+
+    def test_the_inbox_knows_the_app_name(self):
+        # CleanView Play 1.0.1 sent "app": "CleanView Play" and the real inbox refused every
+        # file ("not from CleanView or CleanListen"): the name must be one of its folders
+        import re
+        gs = (support.ROOT / "tools" / "cleanview_inbox.gs").read_text(encoding="utf8")
+        folders = json.loads(re.search(r"var FOLDERS = (\{.*?\});", gs).group(1))
+        learn.send(self.file, "refined")
+        (_, msg), = Inbox.got
+        self.assertIn(msg["app"], folders)
+        self.assertEqual(folders[msg["app"]], "CleanView learned")
 
     def test_inbox_saying_no_is_an_error(self):
         Inbox.answer = {"ok": False, "why": "not from CleanView or CleanListen"}

@@ -38,7 +38,10 @@ touch", then "keeping clean view as a save program only add a play now feature f
 - `version.json` has its own `version` (1.0.0 onwards) and `based_on`, the CleanView
   version its finding comes from; bump `based_on` when merging a CleanView release.
   `engine.app_version()` says "Play 1.0.0 / 1.18.90", so reports sent to the shared inbox
-  say which app made them (and sent files say `"app": "CleanView Play"`).
+  say which app made them. Files sent to the inbox go as `"app": "CleanView"` (the
+  inbox script only knows CleanView and CleanListen; 1.0.1 sent "CleanView Play" and every
+  send was refused) with `"from": "CleanView Play"`, so they land in "CleanView learned".
+  Fixed in 1.0.2 (`learn.INBOX_APP`, `test_inbox.test_the_inbox_knows_the_app_name`).
 
 ## What's different from CleanView
 

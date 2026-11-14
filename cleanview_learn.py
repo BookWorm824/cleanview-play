@@ -47,6 +47,7 @@ LEARNED_SHORTEST = 5
 SEND_URL = ("https://script.google.com/macros/s/"
             "AKfycbxfh9Cv3ctELA3352GTuVA1lshmGZKbwwPDsd39DEImZ-bRjFYml78iYKYZ5a2RGt8/exec")
 MAX_SEND = 2_000_000        # the inbox refuses more
+INBOX_APP = "CleanView"     # the inbox's name for the folder these go in (see send)
 
 
 def send_url():
@@ -60,7 +61,13 @@ def send(path, kind):
     if not url:
         raise RuntimeError("CleanView's inbox isn't set up yet")
     path = Path(path)
-    body = json.dumps({"app": "CleanView Play", "kind": kind, "name": path.name,
+    # "app" must be one the inbox knows (tools/cleanview_inbox.gs FOLDERS: CleanView,
+    # CleanListen): CleanView Play's files go in "CleanView learned" with CleanView's, same
+    # finding, and say where they're from in "from" (and the file's own version, "Play ...").
+    # CleanView Play 1.0.1 sent "CleanView Play" and the inbox said no (the owner, 2026-11-14:
+    # "everything worked except being able to send the report in").
+    body = json.dumps({"app": INBOX_APP, "from": "CleanView Play", "kind": kind,
+                       "name": path.name,
                        "data": json.loads(path.read_text(encoding="utf8"))}).encode("utf8")
     if len(body) > MAX_SEND:
         raise RuntimeError("the file is too big to send")
