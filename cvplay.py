@@ -13,15 +13,24 @@ CleanView's `render()` would put in a clean copy, and `play()` hands them to the
   timing), and the player jumps past it (`skips`). Dragging the seek bar into a cut jumps past
   it too.
 - A long muted stretch is skipped instead of left silent, as `render()` cuts it (1.18.60).
+- It plays inside the CleanView Play window (the owner, 2026-11-14: "Play inside CleanView
+  Play", "Simpler, bigger buttons", and no info screens or subtitle button): mpv draws into
+  the window's video area (`--wid`) with none of its own controls or keys; the window's big
+  buttons drive it through `Remote` (mpv's JSON messages over a named pipe), and a key or click
+  on the picture comes back to the window as a "cvplay-key" message (cvplay.lua).
 
 Times count from 0 = the start of the file, the clock both ffmpeg's filters and mpv use
 (mpv rebases a .ts file's own start time to 0 too)."""
+import asyncio
+import itertools
 import json
 import os
+import queue
 import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import urllib.request
 from pathlib import Path
@@ -33,6 +42,7 @@ APP_DATA = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "shar
 SCRIPT = HERE / "cvplay.lua"
 PLAYER_DIR = HERE / "bin" / "mpv"
 LIST_ENV = "CVPLAY_LIST"            # where the player script finds the list (cvplay.lua)
+REMOTE_ENV = "CVPLAY_REMOTE"        # set: keys and clicks go to the window (cvplay.lua)
 
 # mpv for Windows: the builds mpv's own site points to. The newest is looked up; if GitHub
 # won't say, this one is used.
@@ -180,19 +190,40 @@ def get_player(progress=None):
 
 
 _playing = []            # the player started last, closed when Play now is pressed again
+_count = itertools.count(1)
 
 
-def command(exe, list_path, paths):
-    return [str(exe), "--no-config", f"--script={SCRIPT}",
-            "--force-window=yes", "--keep-open=no", "--idle=no", "--osc=yes",
-            "--hwdec=auto-copy",            # the graphics card decodes; filters still work
-            "--sid=no",                     # no captions (as clean copies have none showing)
-            "--ytdl=no", "--save-position-on-quit=no", "--autofit=85%",
-            "--title=${media-title} - CleanView Play", "--"] + [str(p) for p in paths]
+def pipe_name():
+    """A new name for the line between the window and the player."""
+    n = f"cvplay-{os.getpid()}-{next(_count)}"
+    return "\\\\.\\pipe\\" + n if os.name == "nt" else str(Path(tempfile.gettempdir()) / f"{n}.sock")
 
 
-def play(entries, exe=None):
-    """Play these videos one after another with their mutes and skips. Returns the process."""
+def command(exe, list_path, paths, wid=None, pipe=None):
+    cmd = [str(exe), "--no-config", f"--script={SCRIPT}",
+           # none of mpv's own controls, info screens, menus or keys: the window's big buttons
+           # instead (the owner, 2026-11-14: "less ability to get info on the screen", and the
+           # subtitle button "should be gone")
+           "--osc=no", "--load-stats-overlay=no", "--load-console=no", "--load-select=no",
+           "--load-commands=no", "--load-context-menu=no", "--load-positioning=no",
+           "--load-auto-profiles=no", "--input-default-bindings=no",
+           "--input-builtin-bindings=no", "--input-builtin-drag-and-drop=no",
+           "--osd-level=0", "--osd-bar=no", "--osd-on-seek=no",
+           "--force-window=yes", "--keep-open=no", "--idle=no",
+           "--hwdec=auto-copy",            # the graphics card decodes; filters still work
+           "--sid=no",                     # no captions (as clean copies have none showing)
+           "--ytdl=no", "--save-position-on-quit=no", "--cursor-autohide=1500",
+           "--msg-level=all=warn", "--title=${media-title} - CleanView Play"]
+    cmd.append(f"--wid={wid}" if wid is not None else "--autofit=85%")
+    if pipe:
+        cmd.append(f"--input-ipc-server={pipe}")
+    return cmd + ["--"] + [str(p) for p in paths]
+
+
+def play(entries, exe=None, wid=None, extra=()):
+    """Play these videos one after another with their mutes and skips, inside the window `wid`
+    if given (extra: more mpv options, for tests). Returns the process; `proc.pipe` is the
+    name to reach it by (see Remote)."""
     exe = exe or player()
     if exe is None:
         raise PlayError("The video player isn't here yet.")
@@ -202,11 +233,29 @@ def play(entries, exe=None):
                     "again from where it is now.")
     list_path = write_list(entries)
     stop()
-    env = dict(os.environ, **{LIST_ENV: str(list_path)})
-    proc = subprocess.Popen(command(exe, list_path, [e["path"] for e in entries]), env=env,
-                            creationflags=0x08000000 if os.name == "nt" else 0)
+    pipe = pipe_name()
+    env = dict(os.environ, **{LIST_ENV: str(list_path), REMOTE_ENV: "1"})
+    cmd = command(exe, list_path, [e["path"] for e in entries], wid, pipe)
+    at = cmd.index("--")
+    cmd[at:at] = list(extra)
+    log = open(list_path.parent / "player.txt", "w", encoding="utf8", errors="replace")
+    try:
+        proc = subprocess.Popen(cmd, env=env, stdin=subprocess.DEVNULL, stdout=log,
+                                stderr=subprocess.STDOUT,
+                                creationflags=0x08000000 if os.name == "nt" else 0)
+    finally:
+        log.close()
+    proc.pipe = pipe
     _playing.append(proc)
     return proc
+
+
+def player_said():
+    """What the player wrote last time (its warnings and errors), for the details file."""
+    try:
+        return (APP_DATA / "play" / "player.txt").read_text(encoding="utf8")[-3000:]
+    except OSError:
+        return ""
 
 
 def stop():
@@ -217,6 +266,148 @@ def stop():
             try:
                 p.terminate()
             except OSError:
+                pass
+
+
+# ---------- watched time: the clock of what's seen, cuts left out ----------
+def watched(skips, t):
+    """Where t (the file's own clock) is in what's seen: the cuts before it left out."""
+    return max(0.0, t - sum(min(e, t) - s for s, e in skips if s < t))
+
+
+def original(skips, w):
+    """The file's own clock for w seconds into what's seen (never inside a cut)."""
+    t = max(0.0, w)
+    for s, e in sorted(skips):
+        if s <= t:
+            t += e - s
+        else:
+            break
+    return t
+
+
+def watch_length(e, duration=None):
+    """How long this video is once its cuts are skipped."""
+    dur = duration or e.get("duration") or 0
+    return max(0.0, dur - sum(min(b, dur) - a for a, b in e.get("skips", []) if a < dur))
+
+
+class _Line(asyncio.Protocol):
+    def __init__(self, remote):
+        self.remote, self.buf = remote, b""
+
+    def connection_made(self, transport):
+        self.remote._tr = transport
+
+    def data_received(self, data):
+        *lines, self.buf = (self.buf + data).split(b"\n")
+        for line in lines:
+            self.remote._got(line)
+
+    def connection_lost(self, exc):
+        self.remote._lost()
+
+
+class Remote:
+    """The window's line to the player while it plays: mpv's JSON messages over the named pipe
+    it was started with (asyncio's Windows pipes, which can read and write at once). What the
+    player reports lands in `state` (pause, time-pos, duration, playlist-pos, volume...); the
+    keys and clicks on the picture (cvplay.lua) come in on `keys`. `gone` is set once the
+    player has closed, or couldn't be reached."""
+    WATCH = ("pause", "time-pos", "duration", "playlist-pos", "playlist-count", "volume",
+             "media-title")
+
+    def __init__(self, pipe, proc=None, wait=20.0):
+        self.pipe, self.proc = pipe, proc
+        self.state, self.keys = {}, queue.Queue()
+        self.ready, self.gone = threading.Event(), threading.Event()
+        self._tr = None
+        self._loop = asyncio.ProactorEventLoop() if os.name == "nt" else asyncio.new_event_loop()
+        self._closed = None
+        threading.Thread(target=self._run, args=(wait,), daemon=True,
+                         name="player remote").start()
+
+    def _run(self, wait):
+        asyncio.set_event_loop(self._loop)
+        try:
+            self._loop.run_until_complete(self._main(wait))
+        except Exception:
+            pass
+        finally:
+            self.gone.set()
+            try:
+                self._loop.close()
+            except Exception:
+                pass
+
+    async def _main(self, wait):
+        self._closed = asyncio.Event()
+        until = time.monotonic() + wait
+        while True:                         # the player makes the pipe a moment after it starts
+            try:
+                if os.name == "nt":
+                    tr, _ = await self._loop.create_pipe_connection(lambda: _Line(self), self.pipe)
+                else:
+                    tr, _ = await self._loop.create_unix_connection(lambda: _Line(self), self.pipe)
+                self._tr = tr               # (connection_made may come a moment later)
+                break
+            except OSError:
+                if time.monotonic() > until or (self.proc and self.proc.poll() is not None):
+                    return
+                await asyncio.sleep(0.1)
+        for i, name in enumerate(self.WATCH, 1):
+            self._write(["observe_property", i, name])
+        self.ready.set()
+        await self._closed.wait()
+        if self._tr is not None:
+            self._tr.close()
+
+    def _got(self, line):
+        try:
+            msg = json.loads(line)
+        except ValueError:
+            return
+        ev = msg.get("event")
+        if ev == "property-change":
+            self.state[msg.get("name")] = msg.get("data")
+        elif ev == "client-message":
+            args = msg.get("args") or []
+            if len(args) > 1 and args[0] == "cvplay-key":
+                self.keys.put(args[1])
+
+    def _lost(self):
+        self._tr = None
+        if self._closed is not None:
+            self._closed.set()
+
+    def _write(self, cmd):
+        if self._tr is not None and not self._tr.is_closing():
+            self._tr.write((json.dumps({"command": cmd}) + "\n").encode("utf8"))
+
+    def send(self, *cmd):
+        """Tell the player something (an mpv command: "cycle", "pause"; "seek", 12.5, ...)."""
+        if self.gone.is_set():
+            return
+        try:
+            self._loop.call_soon_threadsafe(self._write, list(cmd))
+        except RuntimeError:                # already closed
+            pass
+
+    def close(self, wait=2.0):
+        """Close the player: asked first, then made to."""
+        self.send("quit")
+        if self.proc is not None:
+            try:
+                self.proc.wait(timeout=wait)
+            except Exception:
+                try:
+                    self.proc.terminate()
+                except OSError:
+                    pass
+        if not self.gone.is_set():
+            try:
+                self._loop.call_soon_threadsafe(self._lost)
+            except RuntimeError:
                 pass
 
 

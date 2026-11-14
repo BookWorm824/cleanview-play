@@ -6,10 +6,14 @@ The mutes, cuts and quieter music must be exactly what CleanView's render() woul
 in a clean copy, since the finding is CleanView's own."""
 import json
 import os
+import queue
 import shutil
 import subprocess
 import tempfile
+import threading
+import time
 import tkinter as tk
+import tkinter.font as tkfont
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -104,6 +108,30 @@ class Player(unittest.TestCase):
         self.assertIn("--sid=no", cmd)                       # no captions
         self.assertEqual(cmd[-3:], ["--", "a.mkv", "b.mkv"])
 
+    def test_none_of_the_players_own_controls_or_info(self):
+        # the owner, 2026-11-14: "less ability to get info on the screen", the subtitle button
+        # "should be gone", "Simpler, bigger buttons", "Play inside CleanView Play"
+        cmd = cvplay.command(Path("mpv.exe"), Path("now.json"), ["a.mkv"], wid=1234,
+                             pipe=r"\\.\pipe\cvplay-test")
+        for opt in ("--osc=no", "--load-stats-overlay=no", "--load-console=no",
+                    "--load-select=no", "--input-default-bindings=no",
+                    "--input-builtin-bindings=no", "--osd-level=0", "--wid=1234",
+                    r"--input-ipc-server=\\.\pipe\cvplay-test"):
+            self.assertIn(opt, cmd)
+        self.assertNotIn("--autofit=85%", cmd)               # it fills the window's picture area
+
+    def test_watched_time_leaves_the_cuts_out(self):
+        skips = [[30.0, 38.0], [60.0, 64.0]]
+        self.assertEqual(cvplay.watched(skips, 20.0), 20.0)
+        self.assertEqual(cvplay.watched(skips, 34.0), 30.0)  # inside a cut: where it starts
+        self.assertEqual(cvplay.watched(skips, 70.0), 58.0)
+        self.assertEqual(cvplay.original(skips, 30.0), 38.0)  # never inside a cut
+        self.assertEqual(cvplay.original(skips, 58.0), 70.0)
+        for w in (0.0, 12.5, 29.9, 31.0, 55.0, 80.0):
+            self.assertAlmostEqual(cvplay.watched(skips, cvplay.original(skips, w)), w)
+        self.assertEqual(cvplay.watch_length({"skips": skips, "duration": 100.0}), 88.0)
+        self.assertEqual(cvplay.watch_length({"skips": [[90.0, 120.0]]}, 100.0), 90.0)
+
     def test_play_tells_the_script_where_the_list_is(self):
         video = support.SANDBOX / "Sample Show S01E01.mp4"
         video.write_bytes(b"")
@@ -125,7 +153,10 @@ class Player(unittest.TestCase):
             second = cvplay.play([cvplay.entry(support.sample_review())], exe=Path("mpv.exe"))
         cmd, env = started[0]
         self.assertEqual(env[cvplay.LIST_ENV], str(support.APP_DATA / "play" / "now.json"))
+        self.assertEqual(env[cvplay.REMOTE_ENV], "1")        # keys and clicks to the window
         self.assertEqual(cmd[-1], str(video))
+        self.assertIn(f"--input-ipc-server={first.pipe}", cmd)
+        self.assertNotEqual(first.pipe, second.pipe)
         self.assertTrue(first.stopped, "playing again closes the player that was open")
         self.assertFalse(second.stopped)
         cvplay._playing.clear()
@@ -227,40 +258,174 @@ class OnTheReviewPage(unittest.TestCase):
         return out
 
     def press_play(self):
+        """Play now with a stand-in player: returns what it was asked to play."""
         played = []
+
+        def play(entries, exe=None, wid=None, extra=()):
+            played.append((entries, exe, wid))
+            return FakeProc()
         with mock.patch.object(ui.cvplay, "player", lambda: Path("mpv.exe")), \
-                mock.patch.object(ui.cvplay, "play", lambda entries, exe=None: played.append(
-                    (entries, exe))):
+                mock.patch.object(ui.cvplay, "play", play), \
+                mock.patch.object(ui.cvplay, "Remote", FakeRemote):
             self.app._play_from_review()
             for _ in range(200):
                 self.app.update()
-                if played and self.app.play_lbl.cget("text") == ui.PLAYING_SAID:
+                if played and getattr(self.app, "watching", None) is not None:
                     break
                 self.app.after(10)
         return played
 
+    def tearDown(self):
+        w = getattr(self.app, "watching", None)
+        if w is not None and w.winfo_exists():
+            w.finish()
+        self.app.update()
+
+    def run_ticks(self, n=3):
+        for _ in range(n):
+            w = self.app.watching
+            if w is None:
+                return
+            w._tick()
+            self.app.update()
+
     def test_play_now_instead_of_save(self):
         names = self.buttons()
-        self.assertIn("\u25b6  Play now", names)
+        self.assertIn("▶  Play now", names)
         self.assertFalse([n for n in names if "Save clean" in n])
         self.assertEqual(self.app.play_lbl.cget("text"), ui.PLAY_SAID)
 
     def test_play_now_plays_what_is_ticked(self):
         played = self.press_play()
         self.assertEqual(len(played), 1)
-        entries, exe = played[0]
+        entries, exe, wid = played[0]
         self.assertEqual(exe, Path("mpv.exe"))
         self.assertEqual(entries[0]["skips"], [[30.0, 38.0]])
         self.assertIn("between(t,14.200,14.500)", entries[0]["af"])
         self.assertEqual(self.app.play_lbl.cget("text"), ui.PLAYING_SAID)
         self.assertEqual(self.app.page_name, "review", "the review stays open")
 
+    def test_it_plays_inside_the_window(self):
+        # the owner, 2026-11-14: "Play inside CleanView Play"
+        entries, exe, wid = self.press_play()[0]
+        w = self.app.watching
+        self.assertEqual(wid, w.video.winfo_id(), "the player draws in the picture area")
+        self.assertEqual(w.winfo_toplevel(), self.app)
+        self.assertEqual(str(w.place_info().get("relwidth")), "1")   # covers the review
+
+    def test_big_simple_buttons(self):
+        # the owner, 2026-11-14: "Simpler, bigger buttons"
+        self.press_play()
+        w = self.app.watching
+        found = {}
+
+        def walk(x):
+            if isinstance(x, tk.Button):
+                found[x.what] = x
+            for c in x.winfo_children():
+                walk(c)
+        walk(w.bar)
+        for what in ("stop", "back", "pause", "forward", "quieter", "louder", "fullscreen",
+                     "next"):
+            self.assertIn(what, found)
+        for b in found.values():
+            self.assertGreaterEqual(abs(tkfont.Font(font=b.cget("font")).actual("size")), 13)
+        self.assertFalse(found["next"].winfo_manager(), "Next only with more than one video")
+
+    def test_the_buttons_drive_the_player(self):
+        self.press_play()
+        w = self.app.watching
+        r = w.remote
+        r.state.update({"time-pos": 25.0, "duration": 100.0, "playlist-pos": 0, "pause": False})
+        self.run_ticks()
+        self.assertEqual(w.pause_btn.cget("text"), "❚❚  Pause")
+        w._do("pause")
+        w._do("forward")                    # 25 + 10 of what's seen, past the 30-38 cut: 43
+        w._do("louder")
+        r.state["time-pos"] = 40.0
+        w._do("back")                       # 40 is 32 seen; 10 back is 22
+        self.assertEqual(r.sent, [("cycle", "pause"), ("seek", 43.0, "absolute+exact"),
+                                  ("add", "volume", 10), ("seek", 22.0, "absolute+exact")])
+        r.state.update({"pause": True, "volume": 90.0})
+        self.run_ticks()
+        self.assertEqual(w.pause_btn.cget("text"), "▶  Play")
+        self.assertIn("Volume 90%", w.time_lbl.cget("text"))
+        self.assertIn("0:32 / 1:32", w.time_lbl.cget("text"))     # cut left out of both
+
+    def test_keys_and_clicks_on_the_picture(self):
+        self.press_play()
+        w = self.app.watching
+        w.remote.keys.put("pause")
+        w.remote.keys.put("quieter")
+        self.run_ticks(1)
+        self.assertEqual(w.remote.sent, [("cycle", "pause"), ("add", "volume", -10)])
+
+    def test_full_screen_and_back(self):
+        self.press_play()
+        w = self.app.watching
+        asked = []
+        with mock.patch.object(self.app, "attributes", lambda *a: asked.append(a)):
+            w._do("fullscreen")
+            self.assertTrue(w.full)
+            self.assertIn("Leave", w.full_btn.cget("text"))
+            w._do("esc")
+        self.assertEqual(asked, [("-fullscreen", True), ("-fullscreen", False)])
+        self.assertFalse(w.full)
+
+    def test_stop_uncovers_the_review_as_it_was(self):
+        ticks = [v.get() for v, j, sc in self.app.scene_vars]
+        self.press_play()
+        w = self.app.watching
+        r = w.remote
+        r.state["time-pos"] = 5.0
+        self.run_ticks(1)
+        w._do("stop")
+        for _ in range(50):
+            self.app.update()
+            if r.closed:
+                break
+            self.app.after(10)
+        self.assertTrue(r.closed, "the player is closed")
+        self.assertFalse(w.winfo_exists())
+        self.assertIsNone(self.app.watching)
+        self.assertEqual(self.app.page_name, "review")
+        self.assertEqual([v.get() for v, j, sc in self.app.scene_vars], ticks)
+        self.assertEqual(self.app.play_lbl.cget("text"), ui.WATCHED_SAID)
+
+    def test_the_end_of_the_video_uncovers_the_review(self):
+        self.press_play()
+        w = self.app.watching
+        w.remote.state["time-pos"] = 99.0
+        self.run_ticks(1)
+        w.remote.gone.set()                 # the last video ended and the player closed
+        self.run_ticks(1)
+        self.assertIsNone(self.app.watching)
+        self.assertEqual(self.app.play_lbl.cget("text"), ui.WATCHED_SAID)
+
+    def test_a_player_that_never_started_is_said_plainly(self):
+        said = []
+        self.press_play()
+        w = self.app.watching
+        with mock.patch.object(ui.messagebox, "showerror", lambda t, m, **k: said.append(m)):
+            w.remote.gone.set()
+            self.run_ticks(1)
+        self.assertIn("closed before the video started", said[0])
+        self.assertEqual(self.app.play_lbl.cget("text"), ui.PLAY_SAID)
+
+    def test_closing_the_window_closes_the_player(self):
+        self.press_play()
+        w = self.app.watching
+        proc = w.proc
+        w.destroy()                         # as when the whole window closes
+        self.assertTrue(proc.stopped)
+        self.app.watching = None
+
     def test_a_changed_tick_plays_with_the_change(self):
         for v, j, sc in self.app.scene_vars:
             v.set(sc["s"] == 60.0)              # the kiss ticked, the fight unticked
         for v, j, m in self.app.word_vars:
             v.set(False)
-        entries, _ = self.press_play()[0]
+        entries, _, _ = self.press_play()[0]
         self.assertEqual(entries[0]["skips"], [[60.0, 64.0]])
         self.assertNotIn("14.200", entries[0]["af"])
 
@@ -286,6 +451,35 @@ class OnTheReviewPage(unittest.TestCase):
                 self.app.after(10)
         self.assertIn("Can't find Sample.mp4", said[0])
         self.assertEqual(self.app.play_lbl.cget("text"), ui.PLAY_SAID)
+        self.assertIsNone(getattr(self.app, "watching", None))
+
+
+class FakeProc:
+    pipe = "cvplay-test"
+
+    def __init__(self):
+        self.stopped = False
+
+    def poll(self):
+        return 0 if self.stopped else None
+
+    def terminate(self):
+        self.stopped = True
+
+
+class FakeRemote:
+    """Stands in for cvplay.Remote: what the window sent, and what the player says."""
+    def __init__(self, pipe, proc=None, wait=20.0):
+        self.pipe, self.proc = pipe, proc
+        self.state, self.keys, self.sent = {}, queue.Queue(), []
+        self.ready, self.gone = threading.Event(), threading.Event()
+        self.closed = False
+
+    def send(self, *cmd):
+        self.sent.append(cmd)
+
+    def close(self, wait=2.0):
+        self.closed = True
 
 
 ttk_button = ui.ttk.Button
@@ -298,6 +492,15 @@ class Script(unittest.TestCase):
         self.assertEqual(cvplay.LIST_ENV, "CVPLAY_LIST")
         for prop in ('"af"', '"vf"', '"aid"', '"time-pos"', '"absolute+exact"'):
             self.assertIn(prop, lua)
+
+    def test_keys_and_clicks_go_to_the_window(self):
+        lua = cvplay.SCRIPT.read_text(encoding="utf8")
+        self.assertIn('os.getenv("CVPLAY_REMOTE")', lua)
+        self.assertEqual(cvplay.REMOTE_ENV, "CVPLAY_REMOTE")
+        self.assertIn('"cvplay-key"', lua)
+        self.assertIn("add_forced_key_binding", lua)     # mpv's own keys are all off
+        for key in ("SPACE", "MBTN_LEFT", "MBTN_LEFT_DBL", "ESC", "LEFT", "RIGHT"):
+            self.assertIn(key, lua)
 
 
 @unittest.skipUnless(support.FFMPEG and cvplay.player(), "needs ffmpeg and the player (bin\\mpv)")
@@ -393,6 +596,91 @@ class RealPlayer(unittest.TestCase):
         # Played hidden, it runs as fast as it can, so on a busy PC (a full test run) the jump
         # can come a few frames later: 4 once (2026-11-14). Still black, never the picture.
         self.assertLessEqual(len(sizes) - len(picture), 8)
+
+    def test_the_window_drives_the_player(self):
+        # the window's buttons and keys reach the real player through Remote (no picture or
+        # sound here): pause, a jump into a cut lands past it, a key on the picture comes back
+        e = cvplay.entry(self.sample(scenes=[{"s": 6.0, "e": 8.0, "cut": True}]))
+        proc = cvplay.play([e], cvplay.player(),
+                           extra=["--vo=null", "--ao=null", "--force-window=no"])
+        r = cvplay.Remote(proc.pipe, proc)
+        self.addCleanup(r.close)
+        self.assertTrue(r.ready.wait(15), "reached the player")
+
+        def until(test, secs=8.0):
+            stop = time.monotonic() + secs
+            while time.monotonic() < stop:
+                if test():
+                    return True
+                time.sleep(0.05)
+            return False
+        self.assertTrue(until(lambda: (r.state.get("time-pos") or 0) > 0.3))
+        self.assertEqual(r.state.get("duration"), 10.0)
+        self.assertEqual(r.state.get("playlist-count"), 1)
+        r.send("cycle", "pause")
+        self.assertTrue(until(lambda: r.state.get("pause") is True))
+        r.send("cycle", "pause")
+        r.send("seek", 6.5, "absolute+exact")
+        self.assertTrue(until(lambda: (r.state.get("time-pos") or 0) >= 8.0),
+                        r.state.get("time-pos"))
+        r.send("script-message", "cvplay-key", "fullscreen")   # as the script does for a key
+        self.assertTrue(until(lambda: not r.keys.empty()))
+        self.assertEqual(r.keys.get(), "fullscreen")
+        r.close()
+        self.assertTrue(r.gone.wait(5))
+        self.assertIsNotNone(proc.poll(), "the player closed")
+
+    @unittest.skipUnless(os.name == "nt", "the picture inside the window is for Windows")
+    def test_it_plays_inside_the_window(self):
+        # the owner, 2026-11-14: "Play inside CleanView Play". The real player in a window
+        # (see-through, as every test window; no sound): its picture sits in the window's
+        # picture area and follows it when the window changes size; Stop closes it.
+        import ctypes
+        from ctypes import wintypes
+
+        class Win(tk.Tk):
+            def _px(self, n):
+                return n
+        try:
+            root = Win()
+        except tk.TclError as ex:
+            self.skipTest(f"no screen to draw on ({ex})")
+        self.addCleanup(root.destroy)
+        root.geometry("800x600+40+40")
+        ended = []
+        w = ui.Watching(root, [cvplay.entry(self.sample())], lambda p, e: ended.append((p, e)))
+        w.extra = ["--ao=null"]
+        w.start(cvplay.player())
+        user32 = ctypes.windll.user32
+        user32.GetWindow.restype = wintypes.HWND
+
+        def size(hwnd):
+            rc = wintypes.RECT()
+            user32.GetClientRect(wintypes.HWND(hwnd), ctypes.byref(rc))
+            return rc.right - rc.left, rc.bottom - rc.top
+
+        def pump(test, secs=15.0):
+            stop = time.monotonic() + secs
+            while time.monotonic() < stop:
+                root.update()
+                if test():
+                    return True
+                time.sleep(0.02)
+            return False
+        area = w.video.winfo_id()
+        self.assertTrue(pump(lambda: w.played), "the video started")
+        self.assertTrue(pump(lambda: user32.GetWindow(wintypes.HWND(area), 5)), "the picture")
+        child = user32.GetWindow(wintypes.HWND(area), 5)          # GW_CHILD
+        self.assertTrue(pump(lambda: size(child) == size(area)), (size(child), size(area)))
+        root.geometry("640x480")
+        self.assertTrue(pump(lambda: size(area)[0] < 700 and size(child) == size(area)),
+                        (size(child), size(area)))
+        w._do("pause")
+        self.assertTrue(pump(lambda: w.remote.state.get("pause") is True))
+        proc = w.proc
+        w._do("stop")
+        self.assertTrue(pump(lambda: proc.poll() is not None, 5), "the player closed")
+        self.assertEqual(ended, [(True, False)])
 
 
 if __name__ == "__main__":

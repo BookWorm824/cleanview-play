@@ -44,6 +44,8 @@ LIGHT = dict(
     PLAIN_DIM="#F4F1EC", PLAIN_EDGE="#D9D2C7", RING="#CFC6B8", SOFT_EDGE="#DCD4C7",
     WARN="#B5523B", WORD_BG="#F3E3DF", WORD_INK="#8A3B2E", SHADE="#FAF8F5",
     SAY_REMOVE="#8E2B2B", SAY_FINE="#2E7D4F", SAY_WORD="#A0663A",
+    PLAYER_BG="#000000", PLAYER_BAR="#1E1F21", PLAYER_BTN="#36383C", PLAYER_BTN_HOVER="#46494E",
+    PLAYER_INK="#F2EFEA", PLAYER_DIM="#B3AEA6",     # the player (the same in both looks)
     PIECES=dict(off="#D8D1C6", some="#8FB5AC", tick_off="#FFFFFF", tick_edge="#9C958B",
                 dim_fill="#F1EEEA", dim_edge="#CFC9C1", dim_on="#A9C2BC", bar="#D3CBC0",
                 bar_hover="#B7AEA2"))
@@ -57,6 +59,8 @@ DARK = dict(
     PLAIN_DIM="#2B2D31", PLAIN_EDGE="#4C4F54", RING="#585B61", SOFT_EDGE="#46494E",
     WARN="#F28D76", WORD_BG="#4C2B27", WORD_INK="#F2AA9A", SHADE="#2B2D31",
     SAY_REMOVE="#F0907E", SAY_FINE="#72C691", SAY_WORD="#E3A784",
+    PLAYER_BG="#000000", PLAYER_BAR="#1E1F21", PLAYER_BTN="#36383C", PLAYER_BTN_HOVER="#46494E",
+    PLAYER_INK="#F2EFEA", PLAYER_DIM="#B3AEA6",     # the player (the same in both looks)
     PIECES=dict(off="#4C4F54", some="#35675C", tick_off="#27292C", tick_edge="#7A7E85",
                 dim_fill="#2B2D31", dim_edge="#4C4F54", dim_on="#33504A", bar="#4C4F54",
                 bar_hover="#63676E"))
@@ -81,8 +85,8 @@ NEXT_TO_VIDEO = "A “Clean” folder next to the video"
 PLAY_SAID = "Plays the original with what's ticked muted and cut. Nothing is saved."
 PLAY_SAID_MULTI = ("Plays them one after another with what's ticked muted and cut. "
                    "Nothing is saved.")
-PLAYING_SAID = ("Playing in its own window. Change a tick and press Play now again "
-                "to play it with the change.")
+PLAYING_SAID = "Playing. Press Stop under the picture to come back here."
+WATCHED_SAID = "Change a tick and press Play now to watch it again with the change."
 CHIP = {"Nudity": "#B5523B", "Implied": "#C47A5A", "Graphic": "#9A4A2A", "Disturbing": "#5E3A6E", "Sex": "#9A3E66", "Intimate": "#9A3E66", "Kiss": "#B0457A",
         "Violence": "#7A5A1E", "Gore": "#8E2B2B", "Medical": "#7A4A4A", "Smoking": "#5D6470", "Drinking": "#5D6470",
         "Drugs": "#5D6470", "Immodest": "#A0663A", "Sexual": "#9A3E66", "Sleeping": "#9A3E66",
@@ -392,6 +396,284 @@ def set_icon(win, path=None, again=ICON_AGAIN):
         except Exception:
             pass
     return ok
+
+
+def clock(secs):
+    """12:05, or 1:02:05 for an hour or more."""
+    secs = max(0, int(secs or 0))
+    h, m, s = secs // 3600, secs // 60 % 60, secs % 60
+    return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+
+
+class Watching(tk.Frame):
+    """Play now, inside the window (the owner, 2026-11-14: "Play inside CleanView Play",
+    "Simpler, bigger buttons", "less ability to get info on the screen", and mpv's subtitle
+    button "should be gone"). It covers the review page while the videos play: the picture,
+    and under it the title, the time (of what's seen: cuts left out), a bar to jump with, and
+    big buttons. Stop, or the end of the last video, uncovers the review just as it was.
+    The player (cvplay) has none of its own controls; keys and clicks on the picture come
+    back here (`Remote.keys`), so everything goes through `_do`."""
+    STEP = 10                   # seconds back or forward, of what's seen
+    extra = ()                  # more player options (tests: no sound)
+    KEYMAP = {"<space>": "pause", "<Left>": "back", "<Right>": "forward", "<Up>": "louder",
+              "<Down>": "quieter", "<f>": "fullscreen", "<F>": "fullscreen", "<Escape>": "esc"}
+
+    def __init__(self, app, entries, on_done):
+        super().__init__(app, bg=PLAYER_BG)
+        self.app, self.entries, self.on_done = app, entries, on_done
+        self.remote = self.proc = None
+        self.played = False         # the picture started (the player said where it was)
+        self.full = False
+        self.drag = None            # where the bar is being dragged to (0-1)
+        self.hold = (None, 0.0)     # where it was dropped, shown until the player catches up
+        self.closing = False
+        self._loud = 0.0            # when the sound was last made louder or quieter
+        self._moved = (time.monotonic(), None)
+        self._tick_id = None
+        self.place(x=0, y=0, relwidth=1, relheight=1)
+        self.lift()
+        self.bar = tk.Frame(self, bg=PLAYER_BAR)
+        self.bar.pack(side="bottom", fill="x")
+        self._bar_shown = True
+        self.video = tk.Frame(self, bg=PLAYER_BG)
+        self.video.pack(side="top", fill="both", expand=True)
+        self._build_bar()
+        self._saved_keys = {seq: app.bind(seq) for seq in self.KEYMAP}
+        for seq, what in self.KEYMAP.items():
+            app.bind(seq, lambda e, w=what: self._do(w))
+        self._saved_wheel = app.tk.call("bind", "all", "<MouseWheel>")
+        app.bind_all("<MouseWheel>", lambda e: self._do("louder" if e.delta > 0 else "quieter"))
+        self.bind("<Destroy>", self._destroyed, add="+")
+        self.focus_set()
+
+    # ---------- what's under the picture ----------
+    def _build_bar(self):
+        X = self.app._px
+        top = tk.Frame(self.bar, bg=PLAYER_BAR)
+        top.pack(fill="x", padx=X(16), pady=(X(10), X(2)))
+        self.title_lbl = tk.Label(top, text=self.entries[0].get("title", ""), bg=PLAYER_BAR,
+                                  fg=PLAYER_INK, font=(FONT, 12, "bold"), anchor="w")
+        self.title_lbl.pack(side="left", fill="x", expand=True)
+        self.time_lbl = tk.Label(top, text="", bg=PLAYER_BAR, fg=PLAYER_DIM, font=(FONT, 12),
+                                 anchor="e")
+        self.time_lbl.pack(side="right")
+        self.pos = tk.Canvas(self.bar, height=X(24), bg=PLAYER_BAR, highlightthickness=0,
+                             cursor="hand2")
+        self.pos.pack(fill="x", padx=X(16))
+        self.pos.bind("<Button-1>", self._drag_to)
+        self.pos.bind("<B1-Motion>", self._drag_to)
+        self.pos.bind("<ButtonRelease-1>", self._drop)
+        self.pos.bind("<Configure>", lambda e: self._draw_pos())
+        row = tk.Frame(self.bar, bg=PLAYER_BAR)
+        row.pack(fill="x", padx=X(12), pady=(X(6), X(14)))
+        left = tk.Frame(row, bg=PLAYER_BAR)
+        left.pack(side="left")
+        right = tk.Frame(row, bg=PLAYER_BAR)
+        right.pack(side="right")
+        mid = tk.Frame(row, bg=PLAYER_BAR)
+        mid.pack(side="left", expand=True)
+        self.stop_btn = self._button(left, "■  Stop", "stop")
+        self.next_btn = self._button(left, "Next  ⏭", "next", show=False)
+        self._button(mid, "⏪  10 s", "back")
+        self.pause_btn = self._button(mid, "❚❚  Pause", "pause", main=True, width=9)
+        self._button(mid, "10 s  ⏩", "forward")
+        self._button(right, "Volume down", "quieter")
+        self._button(right, "Volume up", "louder")
+        self.full_btn = self._button(right, "⛶  Full screen", "fullscreen")
+
+    def _button(self, parent, text, what, main=False, show=True, width=0):
+        X = self.app._px
+        b = tk.Button(parent, text=text, command=lambda: self._do(what), width=width,
+                      font=(FONT, 13, "bold"), fg=PLAYER_INK, activeforeground=PLAYER_INK,
+                      bg=ACCENT if main else PLAYER_BTN,
+                      activebackground=ACCENT_DK if main else PLAYER_BTN_HOVER,
+                      relief="flat", bd=0, padx=X(14), pady=X(8), cursor="hand2",
+                      takefocus=0, highlightthickness=0)
+        b.what = what
+        if show:
+            b.pack(side="left", padx=X(4))
+        return b
+
+    def _draw_pos(self, frac=None):
+        c = self.pos
+        if frac is None:
+            frac = getattr(self, "_frac", 0.0)
+        self._frac = frac = min(1.0, max(0.0, frac))
+        w, h = c.winfo_width(), c.winfo_height()
+        r = max(6, h // 3)
+        x0, x1, y = r, max(r + 1, w - r), h // 2
+        x = x0 + (x1 - x0) * frac
+        c.delete("all")
+        c.create_rectangle(x0, y - 3, x1, y + 3, fill=PLAYER_BTN, outline="")
+        c.create_rectangle(x0, y - 3, x, y + 3, fill=ACCENT, outline="")
+        c.create_oval(x - r, y - r, x + r, y + r, fill=PLAYER_INK, outline="")
+
+    def _frac_at(self, x):
+        w, h = self.pos.winfo_width(), self.pos.winfo_height()
+        r = max(6, h // 3)
+        return min(1.0, max(0.0, (x - r) / max(1, w - 2 * r)))
+
+    def _drag_to(self, e):
+        self.drag = self._frac_at(e.x)
+        self._draw_pos(self.drag)
+
+    def _drop(self, e):
+        if self.drag is None:
+            return
+        frac, self.drag = self.drag, None
+        v, _ = self._now()
+        total = cvplay.watch_length(v, self._state().get("duration"))
+        if self.remote is not None and total > 0:
+            self.remote.send("seek", round(cvplay.original(v["skips"], frac * total), 3),
+                             "absolute+exact")
+            self.hold = (frac, time.monotonic() + 0.8)
+
+    # ---------- playing ----------
+    def start(self, exe):
+        """Start the player inside the picture area."""
+        self.update_idletasks()
+        self.proc = cvplay.play(self.entries, exe, wid=self.video.winfo_id(), extra=self.extra)
+        self.remote = cvplay.Remote(self.proc.pipe, self.proc)
+        self._tick_id = self.after(150, self._tick)
+
+    def _state(self):
+        return self.remote.state if self.remote is not None else {}
+
+    def _now(self):
+        """The video playing and where it is in it (the file's own clock, None at first)."""
+        st = self._state()
+        pos = st.get("playlist-pos")
+        v = self.entries[pos] if isinstance(pos, int) and 0 <= pos < len(self.entries) \
+            else self.entries[0]
+        return v, st.get("time-pos")
+
+    def _do(self, what):
+        """A button, a key, or a click on the picture."""
+        if self.closing:
+            return
+        if what == "stop":
+            self.finish()
+        elif what == "fullscreen":
+            self._full(not self.full)
+        elif what == "esc":
+            if self.full:
+                self._full(False)
+        elif self.remote is None:
+            return
+        elif what == "pause":
+            self.remote.send("cycle", "pause")
+        elif what in ("back", "forward"):
+            v, t = self._now()
+            if t is not None:
+                w = cvplay.watched(v["skips"], t) + (self.STEP if what == "forward" else -self.STEP)
+                self.remote.send("seek", round(cvplay.original(v["skips"], w), 3),
+                                 "absolute+exact")
+        elif what in ("louder", "quieter"):
+            self.remote.send("add", "volume", 10 if what == "louder" else -10)
+            self._loud = time.monotonic()
+        elif what == "next":
+            self.remote.send("playlist-next", "force")
+
+    def _full(self, on):
+        self.full = on
+        try:
+            self.app.attributes("-fullscreen", on)
+        except tk.TclError:
+            pass
+        self.full_btn.config(text="⛶  Leave full screen" if on else "⛶  Full screen")
+        self._show_bar(True)
+        self._moved = (time.monotonic(), None)
+
+    def _show_bar(self, on):
+        if on and not self._bar_shown:
+            self.bar.pack(side="bottom", fill="x", before=self.video)
+        elif not on and self._bar_shown:
+            self.bar.pack_forget()
+        self._bar_shown = on
+
+    def _tick(self):
+        self._tick_id = None
+        if self.closing or not self.winfo_exists():
+            return
+        r = self.remote
+        while r is not None and not r.keys.empty():
+            self._do(r.keys.get_nowait())
+            if self.closing:
+                return
+        st = self._state()
+        v, t = self._now()
+        if t is not None:
+            self.played = True
+        total = cvplay.watch_length(v, st.get("duration"))
+        frac = cvplay.watched(v["skips"], t or 0) / total if total else 0.0
+        held, until = self.hold
+        if self.drag is not None:
+            frac = self.drag
+        elif held is not None and time.monotonic() < until:
+            frac = held
+        self._draw_pos(frac)
+        said = f"{clock(frac * total)} / {clock(total)}" if total else ""
+        if time.monotonic() - self._loud < 2 and st.get("volume") is not None:
+            said = f"Volume {round(st['volume'])}%     " + said
+        self.time_lbl.config(text=said)
+        n, pos = len(self.entries), st.get("playlist-pos") or 0
+        self.title_lbl.config(text=v.get("title", "") + (f"   ({pos + 1} of {n})" if n > 1 else ""))
+        self.pause_btn.config(text="▶  Play" if st.get("pause") else "❚❚  Pause")
+        more = n > 1 and pos < n - 1
+        if more != bool(self.next_btn.winfo_manager()):
+            if more:
+                self.next_btn.pack(side="left", padx=self.app._px(4))
+            else:
+                self.next_btn.pack_forget()
+        # full screen: the buttons step aside after 3 seconds without the mouse moving
+        try:
+            here = self.winfo_pointerxy()
+        except tk.TclError:
+            here = None
+        now = time.monotonic()
+        if here != self._moved[1]:
+            self._moved = (now, here)
+            self._show_bar(True)
+        elif self.full and self.drag is None and now - self._moved[0] > 3:
+            self._show_bar(False)
+        if (r is not None and r.gone.is_set()) or (self.proc is not None
+                                                   and self.proc.poll() is not None):
+            self.finish(ended=True)
+            return
+        self._tick_id = self.after(200, self._tick)
+
+    def finish(self, ended=False):
+        """Close the player and uncover the review. ended: the player closed by itself."""
+        if self.closing:
+            return
+        self.closing = True
+        if self._tick_id:
+            self.after_cancel(self._tick_id)
+        if self.full:
+            try:
+                self.app.attributes("-fullscreen", False)
+            except tk.TclError:
+                pass
+        for seq, was in self._saved_keys.items():
+            self.app.bind(seq, was)
+        self.app.tk.call("bind", "all", "<MouseWheel>", self._saved_wheel)
+        if self.remote is not None:     # asked to close, then made to (a moment at most)
+            threading.Thread(target=self.remote.close, daemon=True, name="player close").start()
+        elif self.proc is not None and self.proc.poll() is None:
+            self.proc.terminate()
+        self.destroy()
+        self.on_done(self.played, ended)
+
+    def _destroyed(self, e):
+        """The window closing while it plays: the player goes too, straight away."""
+        if e.widget is not self or self.closing:
+            return
+        self.closing = True
+        if self.proc is not None and self.proc.poll() is None:
+            try:
+                self.proc.terminate()
+            except OSError:
+                pass
 
 
 class App(tk.Tk):
@@ -706,6 +988,9 @@ class App(tk.Tk):
         X = self._px
         self.page = tk.Frame(self, bg=BG)
         self.page.pack(fill="both", expand=True, padx=X(36), pady=(X(24), X(16)))
+        w = getattr(self, "watching", None)
+        if w is not None and w.winfo_exists():
+            self.after_idle(w.lift)     # a video playing stays over a page built meanwhile
         self.footer = tk.Frame(self.page, bg=BG)
         self.footer.pack(side="bottom", fill="x", pady=(X(10), 0))
         tk.Frame(self.footer, bg=LINE, height=1).pack(side="top", fill="x", pady=(0, X(12)))
@@ -3834,18 +4119,49 @@ class App(tk.Tk):
             if lbl is not None and lbl.winfo_exists():
                 lbl.config(text=text)
 
+        def failed(ex, details=None):
+            save_details(details or traceback.format_exc())
+            why = str(ex) if isinstance(ex, cvplay.PlayError) else plain_error(ex)
+            say(PLAY_SAID)
+            messagebox.showerror("CleanView Play", f"Couldn't play it. {why}", parent=self)
+
+        def watch(exe):             # here, in the window (2026-11-14), not a window of its own
+            if self.page_name != "review":
+                return
+            old = getattr(self, "watching", None)
+            if old is not None and old.winfo_exists():
+                old.finish()
+            self.watching = Watching(self, entries, done)
+            try:
+                self.watching.start(exe)
+                say(PLAYING_SAID)
+            except Exception as ex:
+                self.watching.finish()
+                failed(ex)
+
+        def done(played, ended):
+            self.watching = None
+            if played:
+                say(WATCHED_SAID)
+            elif ended:                 # the player closed before the picture came up
+                save_details("The video player closed before the video started.\n\n"
+                             + cvplay.player_said())
+                say(PLAY_SAID)
+                messagebox.showerror("CleanView Play", "Couldn't play it. The video player "
+                                     "closed before the video started. The details are saved "
+                                     "in a file, for anyone helping you.", parent=self)
+            else:
+                say(PLAY_SAID)
+
         def go():
             try:
                 exe = cvplay.player() or cvplay.get_player(
                     lambda f, m: self.q.put(("call", lambda m=m, f=f: say(
                         f"{m}  {int(f * 100)}%" if 0 < f < 1 else m))))
-                cvplay.play(entries, exe)
-                self.q.put(("call", lambda: say(PLAYING_SAID)))
+                self.q.put(("call", lambda: watch(exe)))
             except Exception as ex:
-                save_details(traceback.format_exc())
-                why = str(ex) if isinstance(ex, cvplay.PlayError) else plain_error(ex)
-                self.q.put(("call", lambda: (say(PLAY_SAID), messagebox.showerror(
-                    "CleanView Play", f"Couldn't play it. {why}", parent=self))))
+                tb = traceback.format_exc()
+                self.q.put(("call", lambda ex=ex: failed(ex, tb)))
         say("Getting it ready to play…")
         threading.Thread(target=go, daemon=True, name="play now").start()
 

@@ -58,6 +58,20 @@ touch", then "keeping clean view as a save program only add a play now feature f
 - `cvplay.lua` (inside mpv): per file, on `on_preloaded`, picks the sound track by
   `ff-index`, sets `af`/`vf` and the title; on `time-pos` it jumps past a cut (a frame early;
   a cut to the end goes to the next video). Dragging the seek bar into a cut jumps past it.
+- It plays inside the window (1.0.4; the owner, 2026-11-14: "Play inside CleanView Play",
+  "Simpler, bigger buttons", "less ability to get info on the screen", and mpv's subtitle
+  ("message") button "should be gone"). `Watching` in `CleanView.pyw` is placed over the
+  review page: mpv draws into its picture area (`--wid`), under it the title, the time of
+  what's seen (cuts left out: `cvplay.watched`/`original`/`watch_length`), a bar to jump
+  with, and big buttons (Stop, Next with several videos, 10 s back, Play/Pause, 10 s
+  forward, Quieter, Louder, Full screen; full screen hides them after 3 s without the mouse
+  moving). mpv has no OSC, stats, console, menus or keys of its own (`command()`); keys and
+  clicks on the picture come back as `script-message cvplay-key <what>` (cvplay.lua, when
+  `CVPLAY_REMOTE` is set) and everything goes through `Watching._do`. `cvplay.Remote` talks
+  to mpv over its JSON IPC named pipe with asyncio's Proactor pipes (sync file handles
+  deadlock reading and writing at once on Windows). Stop or the end uncovers the review as it
+  was; mpv's warnings go to `APP_DATA\play\player.txt` (`player_said()`), saved in the details
+  file if it closes before the picture starts.
 - The review page: "▶ Play now" instead of "Save clean copy"; the save folder / size row
   is gone; the review stays open (change a tick, play again) and is saved for "Pick up
   where I left off". `_gather_choices()` is the old first half of `_save_from_review()`.
@@ -83,11 +97,17 @@ row each with only its own list; a cut to the end stops there; a mute and a cut 
 shown: none of a cut's picture; at the jump one or two black frames (the cover; the frame at
 exactly the cut's end is black, as render() drops it).
 
+1.0.4 (inside the window): the real mpv in a see-through Tk window draws into the picture
+area and follows it when the window changes size; pause, a jump into a cut (lands past it), a
+key message coming back, and Stop all work through `Remote` (`RealPlayer` tests). A picture
+of the screen was taken with PrintWindow from a see-through window (no PIL in the venv: a BMP
+written by hand, turned into PNG by ffmpeg).
+
 ## Not checked yet
 
 - In a real window on her PC (all the checks were hidden): hardware decoding with the
-  filters on (`--hwdec=auto-copy`), the on-screen controls, full screen, a big Blu-ray rip,
-  surround sound.
+  filters on (`--hwdec=auto-copy`), full screen, whether a click on the picture takes the
+  keyboard (both ways work: Tk's keys or cvplay.lua's), a big Blu-ray rip, surround sound.
 - Watching on the TV through Jellyfin/Roku (the owner wants both): later. Jellyfin's Roku
   app can't mute on cue by itself; skips might be possible through Jellyfin's media
   segments. Nothing built.

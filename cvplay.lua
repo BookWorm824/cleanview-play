@@ -83,3 +83,20 @@ mp.observe_property("time-pos", "number", function(_, t)
         end
     end
 end)
+
+-- Inside the CleanView Play window (CVPLAY_REMOTE set): mpv's own keys are all off, and a key
+-- or click on the picture is passed to the window, whose big buttons do the same things.
+if os.getenv("CVPLAY_REMOTE") then
+    local keys = {
+        SPACE = "pause", MBTN_LEFT = "pause", ["p"] = "pause", PLAYPAUSE = "pause",
+        LEFT = "back", RIGHT = "forward",
+        UP = "louder", DOWN = "quieter", WHEEL_UP = "louder", WHEEL_DOWN = "quieter",
+        ["f"] = "fullscreen", ["F"] = "fullscreen", MBTN_LEFT_DBL = "fullscreen",
+        ESC = "esc", ["q"] = "stop", STOP = "stop", NEXT = "next",
+    }
+    for key, what in pairs(keys) do
+        mp.add_forced_key_binding(key, "cvplay-" .. key, function()
+            mp.commandv("script-message", "cvplay-key", what)
+        end)
+    end
+end
