@@ -21,8 +21,9 @@ import cleanview_claude as cc  # noqa: E402
 import cleanview_learn as learn  # noqa: E402
 import videoqueue as VQ  # noqa: E402  (several videos at once)
 import cvlook as look  # noqa: E402  (the drawn look: cards, switches, pill buttons)
+import cvplay  # noqa: E402  (CleanView Play: the player, no copy saved)
 
-APP_DATA = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "CleanView"
+APP_DATA = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "CleanView Play"
 BG, CARD, INK, MUTED, ACCENT, ACCENT_DK, LINE = (
     "#F6F3EE", "#FFFFFF", "#23211F", "#6D6862", "#2F6F62", "#24574D", "#E3DED6")
 BUTTON_EDGE = "#B9AFA2"
@@ -76,6 +77,12 @@ def use_theme(name):
 
 use_theme("light")
 NEXT_TO_VIDEO = "A “Clean” folder next to the video"
+# CleanView Play: what the line beside "Play now" says
+PLAY_SAID = "Plays the original with what's ticked muted and cut. Nothing is saved."
+PLAY_SAID_MULTI = ("Plays them one after another with what's ticked muted and cut. "
+                   "Nothing is saved.")
+PLAYING_SAID = ("Playing in its own window. Change a tick and press Play now again "
+                "to play it with the change.")
 CHIP = {"Nudity": "#B5523B", "Implied": "#C47A5A", "Graphic": "#9A4A2A", "Disturbing": "#5E3A6E", "Sex": "#9A3E66", "Intimate": "#9A3E66", "Kiss": "#B0457A",
         "Violence": "#7A5A1E", "Gore": "#8E2B2B", "Medical": "#7A4A4A", "Smoking": "#5D6470", "Drinking": "#5D6470",
         "Drugs": "#5D6470", "Immodest": "#A0663A", "Sexual": "#9A3E66", "Sleeping": "#9A3E66",
@@ -346,7 +353,7 @@ ICON = Path(__file__).resolve().parent / "cleanview.ico"
 NO_INTERNET_ASK = ("There's no internet connection, so CleanView can't look for subtitles "
                    "online.\n\nVideos that have their own subtitles will still use them.\n\n"
                    "Clean without looking online?")
-UPDATED_SHOWN_SECS = 3      # how long "CleanView was updated to version ..." stays up
+UPDATED_SHOWN_SECS = 3      # how long "CleanView Play was updated to version ..." stays up
 ICON_AGAIN = (0.5, 3.0)       # seconds after the window is made that its logo is set again
 
 
@@ -390,7 +397,7 @@ def set_icon(win, path=None, again=ICON_AGAIN):
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("CleanView")
+        self.title("CleanView Play")
         # bigger text if she chose it: Tk sizes text as each part of the window is built,
         # so this comes first (and changing it builds the page again, see _set_text_size)
         self._base_scaling = float(self.tk.call("tk", "scaling"))
@@ -577,7 +584,7 @@ class App(tk.Tk):
         if self.upd_bar is None or not self.upd_bar.winfo_exists():
             self._show_update_bar("")
         if self.page_name == "working":
-            messagebox.showinfo("CleanView", "CleanView is busy right now. Update when it's "
+            messagebox.showinfo("CleanView Play", "CleanView Play is busy right now. Update when it's "
                                 "finished (the button will still be here).")
             return
         self._save_settings()           # the start page's ticks, changed since it opened
@@ -599,8 +606,8 @@ class App(tk.Tk):
             self.upd_btn.config(state="normal")
             return
         env = dict(os.environ)
-        env["CLEANVIEW_UPDATED"] = f"CleanView was updated to version {new}." if new else \
-            "CleanView is up to date."
+        env["CLEANVIEW_UPDATED"] = f"CleanView Play was updated to version {new}." if new else \
+            "CleanView Play is up to date."
         if self.page_name == "review":
             env["CLEANVIEW_RESUME"] = "1"
         launcher = Path(__file__).resolve().parent / "launcher.pyw"
@@ -782,8 +789,9 @@ class App(tk.Tk):
     STEPS = [("Movie or episodes", "Choose what to clean. Your original files are never changed."),
              ("What to remove", "Swear words are muted automatically. Everything else is listed "
                                 "for you to check before anything is muted or cut."),
-             ("AI helper", "It double-checks the scenes and reads the dialogue. Recommended."),
-             ("Save to", "Where the clean copies go.")]
+             ("AI helper", "It double-checks the scenes and reads the dialogue. Recommended.")]
+    # CleanView Play saves no copy, so there's no "Save to" step (its pane is still built,
+    # never shown, so the code shared with CleanView stays the same)
 
     def _px(self, n):
         return look.px(self, n)
@@ -905,7 +913,7 @@ class App(tk.Tk):
         p.pack(fill="both", expand=True)
         try:
             ver = json.loads((Path(__file__).resolve().parent / "version.json").read_text())["version"]
-            self.title(f"CleanView {ver}")
+            self.title(f"CleanView Play {ver}")
         except Exception:
             pass
 
@@ -930,7 +938,7 @@ class App(tk.Tk):
         else:
             look.Badge(brand, "video", size=38, fill=ACCENT, fg="#FFFFFF").pack(
                 side="left", padx=(0, X(10)))
-        tk.Label(brand, text="CleanView", bg=SIDE, fg=INK, font=(HEAD, 15)).pack(side="left")
+        tk.Label(brand, text="CleanView Play", bg=SIDE, fg=INK, font=(HEAD, 15)).pack(side="left")
         self._step_rows = []
         for i, (title, _) in enumerate(self.STEPS, 1):
             card = look.Card(side, fill=SIDE, edge="", radius=12, pad=(12, 9))
@@ -1003,7 +1011,7 @@ class App(tk.Tk):
 
             def pick_up(sess=sess):
                 if not self._resume(sess):
-                    messagebox.showinfo("CleanView", "That review couldn't be opened (the files "
+                    messagebox.showinfo("CleanView Play", "That review couldn't be opened (the files "
                                         "may have been moved). Start it again.")
                     self._forget_session()
                     self.show_setup()
@@ -1417,7 +1425,7 @@ class App(tk.Tk):
         try:
             path = learn.export()
         except Exception as ex:
-            messagebox.showerror("CleanView", f"Couldn't save the file. {plain_error(ex)}")
+            messagebox.showerror("CleanView Play", f"Couldn't save the file. {plain_error(ex)}")
             return
         self._send_in(path, "learned")
 
@@ -1430,7 +1438,7 @@ class App(tk.Tk):
             return
         chime()
         if not messagebox.askyesno(
-                "CleanView", "Send it in now?\n\nIt has the lines and words you and the AI "
+                "CleanView Play", "Send it in now?\n\nIt has the lines and words you and the AI "
                 "muted or kept, and its notes. No video or sound. Once it's added, every copy "
                 "of CleanView gets what it learned with an update.", parent=self):
             self._send_by_hand(path)
@@ -1440,7 +1448,7 @@ class App(tk.Tk):
             try:
                 learn.send(path, kind)
                 self.q.put(("call", lambda: messagebox.showinfo(
-                    "CleanView", "Sent. Thank you! It'll be in every copy of CleanView with an "
+                    "CleanView Play", "Sent. Thank you! It'll be in every copy of CleanView with an "
                                  "update soon.", parent=self)))
             except Exception as ex:
                 save_details(f"Sending {path}\n\n{traceback.format_exc()}")
@@ -1454,7 +1462,7 @@ class App(tk.Tk):
         if os.name == "nt":
             subprocess.Popen(["explorer", "/select,", str(path)])
         messagebox.showinfo(
-            "CleanView",
+            "CleanView Play",
             f"{first}Saved as \u201c{path.name}\u201d in {path.parent}.\n\n"
             "Attach that file in your chat with Claude and ask for it to be added to CleanView. "
             "Once it's added, every copy of CleanView (yours, and anyone you've shared it with) "
@@ -1833,7 +1841,7 @@ class App(tk.Tk):
     # ---------- page 2: working ----------
     def start(self):
         if not self.videos:          # the button is always on, so it never looks broken
-            messagebox.showinfo("CleanView", "First choose the movie or episodes to clean, "
+            messagebox.showinfo("CleanView Play", "First choose the movie or episodes to clean, "
                                 "with Choose files in step 1.", parent=self)
             lbl = getattr(self, "vid_lbl", None)
             if lbl is not None and lbl.winfo_exists():
@@ -1847,7 +1855,7 @@ class App(tk.Tk):
             what = "set up on this PC" if state == "missing" else "signed in"
             chime()
             ans = messagebox.askyesnocancel(
-                "CleanView", f"{n} isn't {what} yet.\n\nPress Yes to "
+                "CleanView Play", f"{n} isn't {what} yet.\n\nPress Yes to "
                 f"{'set it up and ' if state == 'missing' else ''}sign in with your own {n} "
                 f"account now (then press Start cleaning again).\n\nPress No to let the AI on this "
                 f"PC read the dialogue this time instead.", parent=self)
@@ -1865,13 +1873,13 @@ class App(tk.Tk):
         # (only what's to be removed counts: not "who reads the dialogue" and the like)
         if not any(o.get(k) not in (False, "off", None) for k in FILTER_KEYS) and \
                 not o.get("mywords"):
-            messagebox.showinfo("CleanView", "Tick at least one thing to remove, or type your "
+            messagebox.showinfo("CleanView Play", "Tick at least one thing to remove, or type your "
                                 "own words to mute.")
             return
         gone = [v for v in self.videos if not os.path.isfile(v)]
         if gone:
             more = f" and {len(gone) - 1} more" if len(gone) > 1 else ""
-            messagebox.showinfo("CleanView", f"Can't find {short(Path(gone[0]).name, 60)}{more}. "
+            messagebox.showinfo("CleanView Play", f"Can't find {short(Path(gone[0]).name, 60)}{more}. "
                                 "It may have been moved, or its drive unplugged. Choose the "
                                 "files again.", parent=self)
             return
@@ -1881,7 +1889,7 @@ class App(tk.Tk):
         self.scan_opts.pop("offline", None)
         if not engine.online():
             chime()
-            if not messagebox.askyesno("CleanView", NO_INTERNET_ASK, parent=self):
+            if not messagebox.askyesno("CleanView Play", NO_INTERNET_ASK, parent=self):
                 return
             self.scan_opts["offline"] = True
         self._save_settings()
@@ -2377,7 +2385,7 @@ class App(tk.Tk):
     def _note_freeze(self, secs):
         """Runs on the watcher's thread, so it reads no part of the window."""
         doing = self._doing
-        lines = [f"CleanView {_app_version()} stopped answering for {int(secs)} seconds "
+        lines = [f"CleanView Play {_app_version()} stopped answering for {int(secs)} seconds "
                  f"({time.strftime('%Y-%m-%d %H:%M')}).",
                  f"Page: {self.page_name}",
                  f"Doing: {doing.get('which', '')} {doing.get('status', '')}".rstrip(),
@@ -2401,9 +2409,9 @@ class App(tk.Tk):
             return
         what = ("closed suddenly" if text.startswith("CleanView closed suddenly")
                 else "stopped responding")
-        path = APP_DATA / f"CleanView {what} {time.strftime('%Y-%m-%d %H-%M')}.json"
+        path = APP_DATA / f"CleanView Play {what} {time.strftime('%Y-%m-%d %H-%M')}.json"
         try:
-            path.write_text(json.dumps({"app": "CleanView", "version": _app_version(),
+            path.write_text(json.dumps({"app": "CleanView Play", "version": _app_version(),
                                         "what": what, "note": text}, indent=1),
                             encoding="utf8")
         except OSError:
@@ -2412,7 +2420,7 @@ class App(tk.Tk):
             return
         chime()
         if not messagebox.askyesno(
-                "CleanView", f"CleanView {what} last time. Sorry about that!\n\nSend a note "
+                "CleanView Play", f"CleanView Play {what} last time. Sorry about that!\n\nSend a note "
                 "about what it was doing, so it can be fixed? It has the step it was on and "
                 "the video's name. No video or sound.", parent=self):
             return
@@ -2421,7 +2429,7 @@ class App(tk.Tk):
             try:
                 learn.send(path, "problem")
                 self.q.put(("call", lambda: messagebox.showinfo(
-                    "CleanView", "Sent. Thank you!", parent=self)))
+                    "CleanView Play", "Sent. Thank you!", parent=self)))
             except Exception as ex:
                 save_details(f"Sending {path}\n\n{traceback.format_exc()}")
                 why = plain_error(ex)
@@ -2505,16 +2513,16 @@ class App(tk.Tk):
         elif kind == "update_ready":
             self._show_update_bar(msg[1])
         elif kind == "update_none":
-            messagebox.showinfo("CleanView", f"You have the newest version ({msg[1]})."
+            messagebox.showinfo("CleanView Play", f"You have the newest version ({msg[1]})."
                                 if msg[1] else "Couldn't check for updates right now. "
                                 "Check your internet connection.")
         elif kind == "update_done":
             self._update_done(*msg[1:])
         elif kind == "warn":
-            messagebox.showwarning("CleanView", msg[1])
+            messagebox.showwarning("CleanView Play", msg[1])
         elif kind == "preview_error":
             self._preview_done(msg[2] if len(msg) > 2 else None)
-            messagebox.showerror("CleanView", msg[1])
+            messagebox.showerror("CleanView Play", msg[1])
         elif kind == "error":
             self._problem(msg[1], msg[2])
             self.show_setup()
@@ -2567,10 +2575,10 @@ class App(tk.Tk):
                 "sound.", icon="error", parent=self):
             return
         o = getattr(self, "scan_opts", None) or {}
-        path = APP_DATA / f"CleanView couldn't check {time.strftime('%Y-%m-%d %H-%M')}.json"
+        path = APP_DATA / f"CleanView Play couldn't check {time.strftime('%Y-%m-%d %H-%M')}.json"
         try:
             path.write_text(json.dumps(
-                {"app": "CleanView", "version": _app_version(),
+                {"app": "CleanView Play", "version": _app_version(),
                  "what": "couldn't check a video",
                  "note": details.replace(str(Path.home()), "~"),
                  "videos": len(self.jobs), "failed": len(bad),
@@ -2584,7 +2592,7 @@ class App(tk.Tk):
             try:
                 learn.send(path, "problem")
                 self.q.put(("call", lambda: messagebox.showinfo(
-                    "CleanView", "Sent. Thank you!", parent=self)))
+                    "CleanView Play", "Sent. Thank you!", parent=self)))
             except Exception as ex:
                 save_details(f"Sending {path}\n\n{traceback.format_exc()}")
                 why = plain_error(ex)
@@ -2599,16 +2607,16 @@ class App(tk.Tk):
         could see why)."""
         details = "\n\n----------\n\n".join(getattr(self, "_save_failures", []))
         if not details or not learn.send_url():
-            messagebox.showwarning("CleanView", text, parent=self)
+            messagebox.showwarning("CleanView Play", text, parent=self)
             return
         chime()
         if not messagebox.askyesno(
-                "CleanView", text + "\n\nSend a note about what went wrong, so it can be fixed? "
+                "CleanView Play", text + "\n\nSend a note about what went wrong, so it can be fixed? "
                 "It has the video's name and the error. No video or sound.", parent=self):
             return
-        path = APP_DATA / f"CleanView couldn't save {time.strftime('%Y-%m-%d %H-%M')}.json"
+        path = APP_DATA / f"CleanView Play couldn't save {time.strftime('%Y-%m-%d %H-%M')}.json"
         try:
-            path.write_text(json.dumps({"app": "CleanView", "version": _app_version(),
+            path.write_text(json.dumps({"app": "CleanView Play", "version": _app_version(),
                                         "what": "couldn't save the clean copy",
                                         "note": details.replace(str(Path.home()), "~")},
                                        indent=1), encoding="utf8")
@@ -2619,7 +2627,7 @@ class App(tk.Tk):
             try:
                 learn.send(path, "problem")
                 self.q.put(("call", lambda: messagebox.showinfo(
-                    "CleanView", "Sent. Thank you!", parent=self)))
+                    "CleanView Play", "Sent. Thank you!", parent=self)))
             except Exception as ex:
                 save_details(f"Sending {path}\n\n{traceback.format_exc()}")
                 why = plain_error(ex)
@@ -2697,7 +2705,8 @@ class App(tk.Tk):
         title = (", ".join(parts[:-1]) + " and " + parts[-1] if len(parts) > 1 else
                  parts[0] if parts else "Nothing found") + (" to check" if parts else "")
         p = self._new_page(title,
-                           "Checked scenes will be cut and checked words and lines muted. Untick "
+                           "When it plays, checked scenes are skipped and checked words and lines "
+                           "muted. Untick "
                            "anything you want to keep, and use \u201cAll dialogue\u201d" +
                            (f" or \u201cAsk {AI_NAME}\u201d" if self.review_ai else "") +
                            " to add anything it missed.",
@@ -2805,22 +2814,15 @@ class App(tk.Tk):
                     self.after(60, lambda: restore(tries - 1))
             self.after(20, restore)
         self._chat_tab(t_chat, good)
-        # where it saves, on its own row above the buttons (beside them it squeezed "Send
-        # what we refined…" until its words were cut off)
+        # CleanView Play: no copy is saved. "Play now" plays the original with what's ticked
+        # muted and cut; the review stays open, to change a tick and play again.
         where = tk.Frame(self.footer, bg=BG)
         where.pack(side="top", fill="x", pady=(0, self._px(8)))
-        ttk.Button(self.footer, text="Save clean copies" if multi else "Save clean copy",
-                   style="Accent.TButton", command=self._save_from_review).pack(side="right")
-        # where it goes, how big it'll be and the room there (Jason, 2026-11-07: the drive
-        # filled up, and he didn't know he could choose where it saves)
-        ttk.Button(where, text="Change…", style="Small.TButton",
-                   command=self._change_save_folder).pack(side="right")
-        self.space_lbl = tk.Label(where, text="", bg=BG, fg=MUTED, font=(FONT, 9),
-                                  justify="right", anchor="e")
-        self.space_lbl.pack(side="right", padx=(0, self._px(10)))
-        self._show_space()
-        for v, _, _ in self.scene_vars:          # a cut ticked or unticked changes the size
-            v.trace_add("write", lambda *a: self.after_idle(self._show_space))
+        ttk.Button(self.footer, text="▶  Play now", style="Accent.TButton",
+                   command=self._play_from_review).pack(side="right")
+        self.play_lbl = tk.Label(where, text=PLAY_SAID_MULTI if multi else PLAY_SAID,
+                                 bg=BG, fg=MUTED, font=(FONT, 9), justify="right", anchor="e")
+        self.play_lbl.pack(side="right", padx=(0, self._px(10)))
         # back to the start page without saving (Jason: just checking what's in it);
         # the review is kept, so "Pick up where I left off" opens it again
         ttk.Button(self.footer, text="\u25c0 Back to start", style="Plain.TButton",
@@ -2886,7 +2888,7 @@ class App(tk.Tk):
                 return True
             chime()
             ans = messagebox.askyesnocancel(
-                "CleanView", f"The clean copy needs about {fmt_bytes(need)}, but there's only "
+                "CleanView Play", f"The clean copy needs about {fmt_bytes(need)}, but there's only "
                 f"{fmt_bytes(free)} free where it's being saved:\n\n{os.path.normpath(folder)}"
                 "\n\nChoose somewhere else to save it?\n\nYes: choose a folder (another drive "
                 "works too).\nNo: save it there anyway.\nCancel: go back to the review.",
@@ -2982,7 +2984,7 @@ class App(tk.Tk):
         s, e = self._parse_time(self.add_from.get()), self._parse_time(self.add_to.get())
         dur = job["analysis"].get("duration", 1e9)
         if s is None or e is None or e <= s or s > dur:
-            messagebox.showinfo("CleanView", "Type a start and end time, like 12:30 and 13:05.")
+            messagebox.showinfo("CleanView Play", "Type a start and end time, like 12:30 and 13:05.")
             return
         self._add_scene(job, s, min(e, dur), "you added this")
         self.add_from.delete(0, "end")
@@ -3099,7 +3101,7 @@ class App(tk.Tk):
     def _mute_word_selected(self):
         rows = [int(r) for r in self.dlg_tv.selection()]
         if len(rows) != 1:
-            messagebox.showinfo("CleanView", "Click one line first, then try again.")
+            messagebox.showinfo("CleanView Play", "Click one line first, then try again.")
             return
         from tkinter import simpledialog
         job = self._dlg_job()
@@ -3118,7 +3120,7 @@ class App(tk.Tk):
                 m["keep"], m["by_you"] = False, True
                 done.append(w.strip())
         if not done:
-            messagebox.showinfo("CleanView", "Couldn't find that in the line.")
+            messagebox.showinfo("CleanView Play", "Couldn't find that in the line.")
             return
         self._save_session()
         self.show_review(tab=1)
@@ -3126,21 +3128,21 @@ class App(tk.Tk):
     def _ask_selected(self):
         rows = [int(r) for r in self.dlg_tv.selection()]
         if not rows:
-            messagebox.showinfo("CleanView", "Select the lines first (click, then Shift-click).")
+            messagebox.showinfo("CleanView Play", "Select the lines first (click, then Shift-click).")
             return
         self._ask_about(self._dlg_job(), "lines", rows=rows)
 
     def _cut_selected(self):
         rows = [int(r) for r in self.dlg_tv.selection()]
         if not rows:
-            messagebox.showinfo("CleanView", "Select the lines first (click, then Shift-click).")
+            messagebox.showinfo("CleanView Play", "Select the lines first (click, then Shift-click).")
             return
         job = self._dlg_job()
         d = job["analysis"]["dialogue"]
         a, b = min(rows), max(rows)
         self._add_scene(job, max(0.0, d[a]["s"] - 0.5), d[b]["e"] + 0.5, "you picked these lines",
                         said=" ".join(l["text"] for l in d[a:b + 1]))
-        messagebox.showinfo("CleanView", f"Added a scene to cut from {engine.cl.fmt_t(d[a]['s'])} "
+        messagebox.showinfo("CleanView Play", f"Added a scene to cut from {engine.cl.fmt_t(d[a]['s'])} "
                             f"to {engine.cl.fmt_t(d[b]['e'])}. It's at the top of the Found tab.")
 
     # --- Claude: review everything, and chat
@@ -3224,7 +3226,7 @@ class App(tk.Tk):
         The one with every video is still claude_findings.csv in CleanView's folder."""
         vids = [j["video"] for j in self.jobs if j.get("analysis")]
         if not learn.findings_rows(vids):
-            messagebox.showinfo("CleanView", "Nothing saved for this video yet. Findings are "
+            messagebox.showinfo("CleanView Play", "Nothing saved for this video yet. Findings are "
                                 "saved each time the AI reviews a video.")
             return
         for name in ("Findings for this video.csv",       # (a copy still open in Excel is locked)
@@ -3235,7 +3237,7 @@ class App(tk.Tk):
                 continue
             open_path(str(APP_DATA / name))
             return
-        messagebox.showinfo("CleanView", "Couldn't make the spreadsheet. Close Excel and try "
+        messagebox.showinfo("CleanView Play", "Couldn't make the spreadsheet. Close Excel and try "
                             "again.")
 
     def _sync_job(self, job):
@@ -3779,7 +3781,45 @@ class App(tk.Tk):
         except tk.TclError:           # the page was built again meanwhile
             pass
 
-    def _save_from_review(self):
+    def _play_from_review(self):
+        """Play the originals with what's ticked now muted and cut (CleanView Play: no copy).
+        Her ticks are learned and kept as for saving; the review stays open."""
+        good = self._gather_choices()
+        if not good:
+            return
+        try:
+            entries = [cvplay.entry(j["analysis"], j["cuts"], j["lines"], j["words"],
+                                    j["quiet"]) for j in good]
+        except Exception as ex:
+            save_details(traceback.format_exc())
+            messagebox.showerror("CleanView Play", f"Couldn't get it ready to play. "
+                                 f"{plain_error(ex)}", parent=self)
+            return
+        self._save_session()            # "Pick up where I left off" opens it with these ticks
+
+        def say(text):
+            lbl = getattr(self, "play_lbl", None)
+            if lbl is not None and lbl.winfo_exists():
+                lbl.config(text=text)
+
+        def go():
+            try:
+                exe = cvplay.player() or cvplay.get_player(
+                    lambda f, m: self.q.put(("call", lambda m=m, f=f: say(
+                        f"{m}  {int(f * 100)}%" if 0 < f < 1 else m))))
+                cvplay.play(entries, exe)
+                self.q.put(("call", lambda: say(PLAYING_SAID)))
+            except Exception as ex:
+                save_details(traceback.format_exc())
+                why = str(ex) if isinstance(ex, cvplay.PlayError) else plain_error(ex)
+                self.q.put(("call", lambda: (say(PLAY_SAID), messagebox.showerror(
+                    "CleanView Play", f"Couldn't play it. {why}", parent=self))))
+        say("Getting it ready to play…")
+        threading.Thread(target=go, daemon=True, name="play now").start()
+
+    def _gather_choices(self):
+        """Every tick on the review page into each video's cuts, lines, words and quiet music,
+        learned and kept in its analysis. The videos that were checked."""
         for j in self.jobs:
             j["cuts"], j["lines"], j["words"], j["quiet"] = [], [], [], []
         for v, j, m in self.word_vars:
@@ -3810,6 +3850,10 @@ class App(tk.Tk):
                 (Path(j["work"]) / "analysis.json").write_text(json.dumps(j["analysis"], indent=1))
             except Exception:
                 pass
+        return good
+
+    def _save_from_review(self):
+        self._gather_choices()
         if not self._room_to_save():
             return
         self.outdir = self._save_folder()
@@ -3883,7 +3927,7 @@ class App(tk.Tk):
             path = learn.export_refined([j["analysis"] for j in jobs],
                                         getattr(self, "chat_history", []))
         except Exception as ex:
-            messagebox.showerror("CleanView", f"Couldn't save the file. {plain_error(ex)}")
+            messagebox.showerror("CleanView Play", f"Couldn't save the file. {plain_error(ex)}")
             return
         self._send_in(path, "refined")
 

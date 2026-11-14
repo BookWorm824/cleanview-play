@@ -23,7 +23,7 @@ from pathlib import Path
 
 import cleanview_accounts as accounts
 
-APP_DATA = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "CleanView"
+APP_DATA = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "CleanView Play"
 _NOWIN = {"creationflags": 0x08000000} if os.name == "nt" else {}
 MODEL = os.environ.get("CLEANVIEW_GEMINI_MODEL", "")       # empty: the CLI's own choice
 PACKAGE = "@google/gemini-cli"

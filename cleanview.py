@@ -131,8 +131,8 @@ def _venv_python():
     """The venv's console Python, for the picture scan and pip. Run as CleanView.exe
     (launcher.pyw), that's CleanView-work.exe beside it, so Task Manager says CleanView."""
     exe = Path(sys.executable)
-    if os.name == "nt" and exe.name.lower() == "cleanview.exe":
-        work = exe.with_name("CleanView-work.exe")
+    if os.name == "nt" and exe.name.lower() in ("cleanview.exe", "cleanview play.exe"):
+        work = exe.with_name(exe.stem + "-work.exe")      # CleanView Play-work.exe
         return str(work if work.exists() else Path(sys.prefix) / "Scripts" / "python.exe")
     py = exe.with_name("python.exe") if os.name == "nt" else exe
     return str(py if py.exists() else exe)
@@ -1196,8 +1196,11 @@ def total_memory_gb():
 
 
 def app_version():
+    """CleanView Play's version and the CleanView its finding comes from ("Play 1.0.0 /
+    1.18.90"), so a report sent to the shared inbox says which app made it."""
     try:
-        return json.loads((HERE / "version.json").read_text())["version"]
+        v = json.loads((HERE / "version.json").read_text())
+        return f"Play {v['version']} / {v['based_on']}" if v.get("based_on") else v["version"]
     except Exception:
         return ""
 

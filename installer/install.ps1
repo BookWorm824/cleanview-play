@@ -1,16 +1,18 @@
-# CleanView installer (Windows 10/11). Run via "Install CleanView.bat".
-# Installs into %LOCALAPPDATA%\CleanView. No admin rights needed.
-# CleanView is fully separate from CleanListen; if CleanListen is installed,
-# its speech model and ffmpeg are copied (not shared) to skip re-downloading.
+# CleanView Play installer (Windows 10/11). Run via "Install CleanView Play.bat".
+# Installs into %LOCALAPPDATA%\CleanView Play. No admin rights needed.
+# CleanView Play is fully separate from CleanView and CleanListen; if either is installed,
+# its models and ffmpeg are copied (not shared) to skip re-downloading. The video player
+# (mpv) is downloaded by CleanView Play itself the first time "Play now" is pressed.
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-$Root   = Join-Path $env:LOCALAPPDATA 'CleanView'
+$Root   = Join-Path $env:LOCALAPPDATA 'CleanView Play'
 $AppDir = Join-Path $Root 'app'
 $Venv   = Join-Path $Root 'venv'
 $Tmp    = Join-Path $Root 'downloads'
 $CL     = Join-Path $env:LOCALAPPDATA 'CleanListen\app'
+$CV     = Join-Path $env:LOCALAPPDATA 'CleanView\app'
 $ModelName = 'sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8'
 $ModelUrl  = "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/$ModelName.tar.bz2"
 $FfmpegUrl = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip'
@@ -56,7 +58,7 @@ function Find-Python {
 }
 
 try {
-    Write-Host "CleanView setup" -ForegroundColor White
+    Write-Host "CleanView Play setup" -ForegroundColor White
     Write-Host "This takes 5-15 minutes. Leave this window open."
     if (-not (Test-Path (Join-Path $PSScriptRoot 'app\CleanView.pyw'))) {
         Fail "Setup files are missing. Right-click the zip, choose 'Extract All', and run setup from the extracted folder."
@@ -64,7 +66,7 @@ try {
     New-Item -ItemType Directory -Force -Path $Root, $AppDir, $Tmp | Out-Null
 
     # 1. app files
-    Step 1 "Copying CleanView..."
+    Step 1 "Copying CleanView Play..."
     Copy-Item -Path (Join-Path $PSScriptRoot 'app\*') -Destination $AppDir -Recurse -Force
     Ok "Done"
 
@@ -91,7 +93,7 @@ try {
     }
     Ok "Using $python"
 
-    # 3. CleanView's own Python environment + libraries
+    # 3. CleanView Play's own Python environment + libraries
     Step 3 "Installing the speech and picture libraries..."
     if (-not (Test-Path (Join-Path $Venv 'Scripts\python.exe'))) {
         & $python -m venv $Venv
@@ -119,10 +121,16 @@ try {
     $bin = Join-Path $AppDir 'bin'
     New-Item -ItemType Directory -Force -Path $bin | Out-Null
     if (-not (Test-Path (Join-Path $bin 'ffmpeg.exe'))) {
-        $clbin = Join-Path $CL 'bin'
-        if ((Test-Path (Join-Path $clbin 'ffmpeg.exe')) -and (Test-Path (Join-Path $clbin 'ffprobe.exe'))) {
-            Copy-Item (Join-Path $clbin 'ffmpeg.exe'), (Join-Path $clbin 'ffprobe.exe') $bin -Force
-            Ok "Copied from CleanListen"
+        $from = $null
+        foreach ($other in @(@{Dir = $CV; Name = 'CleanView'}, @{Dir = $CL; Name = 'CleanListen'})) {
+            $ob = Join-Path $other.Dir 'bin'
+            if (-not $from -and (Test-Path (Join-Path $ob 'ffmpeg.exe')) -and (Test-Path (Join-Path $ob 'ffprobe.exe'))) {
+                Copy-Item (Join-Path $ob 'ffmpeg.exe'), (Join-Path $ob 'ffprobe.exe') $bin -Force
+                $from = $other.Name
+            }
+        }
+        if ($from) {
+            Ok "Copied from $from"
         } else {
             $zip = Join-Path $Tmp 'ffmpeg.zip'
             Download $FfmpegUrl $zip
@@ -145,6 +153,12 @@ try {
     $models = Join-Path $AppDir 'models'
     $mdir = Join-Path $models $ModelName
     New-Item -ItemType Directory -Force -Path $models | Out-Null
+    $cvm = Join-Path $CV 'models'
+    if (-not (Test-Path (Join-Path $mdir 'tokens.txt')) -and (Test-Path (Join-Path (Join-Path $cvm $ModelName) 'tokens.txt'))) {
+        Get-ChildItem $cvm -Directory | ForEach-Object { Copy-Item $_.FullName $models -Recurse -Force }
+        Get-ChildItem $cvm -File -Filter *.onnx | ForEach-Object { Copy-Item $_.FullName $models -Force }
+        Ok "Copied CleanView's models"
+    }
     if (-not (Test-Path (Join-Path $mdir 'tokens.txt'))) {
         $clm = Join-Path $CL "models\$ModelName"
         if (Test-Path (Join-Path $clm 'tokens.txt')) {
@@ -161,24 +175,24 @@ try {
     } else { Ok "Already there" }
 
     # 6. icon on the desktop and in the Start menu
-    Step 6 "Adding the CleanView icon..."
+    Step 6 "Adding the CleanView Play icon..."
     $pyw = Join-Path $Venv 'Scripts\pythonw.exe'
     $launcher = Join-Path $AppDir 'launcher.pyw'
     $s = New-Object -ComObject WScript.Shell
     foreach ($dir in @([Environment]::GetFolderPath('Desktop'), [Environment]::GetFolderPath('Programs'))) {
         if (-not $dir) { continue }
-        $l = $s.CreateShortcut((Join-Path $dir 'CleanView.lnk'))
+        $l = $s.CreateShortcut((Join-Path $dir 'CleanView Play.lnk'))
         $l.TargetPath = $pyw
         $l.Arguments = '"' + $launcher + '"'
         $l.WorkingDirectory = $AppDir
         $l.IconLocation = (Join-Path $AppDir 'cleanview.ico')
-        $l.Description = 'Clean up movies and TV shows'
+        $l.Description = 'Play movies and TV shows with the bad parts muted and skipped'
         $l.Save()
     }
     Ok "On your desktop and in the Start menu"
 
     Write-Host ""
-    Write-Host "All done! Opening CleanView..." -ForegroundColor Green
+    Write-Host "All done! Opening CleanView Play..." -ForegroundColor Green
     Start-Process -FilePath $pyw -ArgumentList ('"' + $launcher + '"') -WorkingDirectory $AppDir
 }
 catch {

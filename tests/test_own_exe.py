@@ -53,16 +53,16 @@ class OwnExe(unittest.TestCase):
         venv = self.tmp / "venv"
         venv.mkdir()
         shutil.copy2(Path(sys.prefix) / "pyvenv.cfg", venv / "pyvenv.cfg")
-        self.folder = venv / "CleanView"
+        self.folder = venv / "CleanView Play"
 
     def make(self):
         return self.lm.make_own_exe(self.folder, sys.base_prefix, ROOT / "cleanview.ico")
 
     def test_named_cleanview_with_its_icon(self):
         exe = self.make()
-        self.assertEqual(exe, self.folder / "CleanView.exe")
-        for e in (exe, self.folder / "CleanView-work.exe"):
-            self.assertEqual(description(e), "CleanView")
+        self.assertEqual(exe, self.folder / "CleanView Play.exe")
+        for e in (exe, self.folder / "CleanView Play-work.exe"):
+            self.assertEqual(description(e), "CleanView Play")
             self.assertEqual(icon_count(e), 1)
 
     def test_made_once(self):
@@ -87,7 +87,7 @@ class OwnExe(unittest.TestCase):
             make.assert_not_called()
 
     def test_already_cleanview_exe(self):
-        with mock.patch.object(self.lm.sys, "executable", str(self.folder / "CleanView.exe")), \
+        with mock.patch.object(self.lm.sys, "executable", str(self.folder / "CleanView Play.exe")), \
                 mock.patch.object(self.lm, "make_own_exe") as make:
             self.assertFalse(self.lm.as_own_exe())
             make.assert_not_called()
@@ -101,6 +101,13 @@ class WorkExe(unittest.TestCase):
         (tmp / "CleanView-work.exe").write_bytes(b"")
         with mock.patch.object(engine.sys, "executable", str(tmp / "CleanView.exe")):
             self.assertEqual(engine._venv_python(), str(tmp / "CleanView-work.exe"))
+
+    def test_cleanview_play_runs_as_its_own_work_exe(self):
+        tmp = Path(tempfile.mkdtemp(prefix="cv-work-"))
+        self.addCleanup(shutil.rmtree, tmp, True)
+        (tmp / "CleanView Play-work.exe").write_bytes(b"")
+        with mock.patch.object(engine.sys, "executable", str(tmp / "CleanView Play.exe")):
+            self.assertEqual(engine._venv_python(), str(tmp / "CleanView Play-work.exe"))
 
 
 if __name__ == "__main__":

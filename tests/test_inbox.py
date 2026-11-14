@@ -65,7 +65,7 @@ class Send(unittest.TestCase):
         learn.send(self.file, "learned")
         (kind, msg), = Inbox.got
         self.assertEqual(kind, "application/json")
-        self.assertEqual(msg, {"app": "CleanView", "kind": "learned",
+        self.assertEqual(msg, {"app": "CleanView Play", "kind": "learned",
                                "name": "CleanView learned 2026-10-28.json",
                                "data": {"date": "2026-10-28", "shows": {"castle": {}}}})
 

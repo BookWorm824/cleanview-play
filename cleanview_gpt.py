@@ -17,7 +17,7 @@ from pathlib import Path
 
 import cleanview_accounts as accounts
 
-APP_DATA = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "CleanView"
+APP_DATA = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "CleanView Play"
 _NOWIN = {"creationflags": 0x08000000} if os.name == "nt" else {}
 MODEL = os.environ.get("CLEANVIEW_CHATGPT_MODEL", "")      # empty: your plan's default
 

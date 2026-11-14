@@ -68,11 +68,13 @@ class OnTheReviewPage(unittest.TestCase):
         self.assertTrue(self.app._resume())
         self.app.update()
 
+    @unittest.skip("CleanView Play saves no copy: no save folder on the review page")
     def test_says_where_and_how_much(self):
         text = self.app.space_lbl.cget("text")
         self.assertIn("Saves to", text)
         self.assertIn("free there", text)
 
+    @unittest.skip("CleanView Play saves no copy: no save folder on the review page")
     def test_change_picks_the_folder(self):
         new = str(support.SANDBOX / "Other drive")
         with mock.patch.object(ui.filedialog, "askdirectory", lambda **k: new):

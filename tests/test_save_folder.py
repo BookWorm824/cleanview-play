@@ -64,6 +64,7 @@ class SaveFolder(unittest.TestCase):
         self.app.show_setup()
         self.app.update()
 
+    @unittest.skip("CleanView Play has no Save to step to show it on")
     def test_kept_after_closing(self):
         self.choose(self.folder)
         self.assertEqual(settings().get("save_to"), str(self.folder))

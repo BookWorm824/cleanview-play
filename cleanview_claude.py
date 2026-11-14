@@ -18,7 +18,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-APP_DATA = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "CleanView"
+APP_DATA = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "CleanView Play"
 _NOWIN = {"creationflags": 0x08000000} if os.name == "nt" else {}
 MODEL = os.environ.get("CLEANVIEW_CLAUDE_MODEL", "sonnet")
 # Windows refuses a command line over 32,767 characters; a longer prompt goes through stdin

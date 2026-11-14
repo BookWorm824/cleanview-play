@@ -35,7 +35,7 @@ from pathlib import Path
 import cvcore
 import cvlang     # the language being cleaned: lines in another alphabet are kept as they are
 
-APP_DATA = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "CleanView"
+APP_DATA = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "CleanView Play"
 DIR = APP_DATA / "learned"
 MAX_LINES = 400
 # A muted conversation is learned line by line, so short everyday lines in it ("What do
@@ -60,7 +60,7 @@ def send(path, kind):
     if not url:
         raise RuntimeError("CleanView's inbox isn't set up yet")
     path = Path(path)
-    body = json.dumps({"app": "CleanView", "kind": kind, "name": path.name,
+    body = json.dumps({"app": "CleanView Play", "kind": kind, "name": path.name,
                        "data": json.loads(path.read_text(encoding="utf8"))}).encode("utf8")
     if len(body) > MAX_SEND:
         raise RuntimeError("the file is too big to send")

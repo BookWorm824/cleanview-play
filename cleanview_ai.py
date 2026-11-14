@@ -638,7 +638,7 @@ def ensure_ai(progress=None):
 
 
 NUM_CTX = 8192     # the same everywhere, or Ollama loads the model again
-APP_DATA = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "CleanView"
+APP_DATA = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "CleanView Play"
 ANSWERS = APP_DATA / "ai_answers"
 KEEP_ANSWERS = 20000         # the newest this many are kept (a few MB: a season or two)
 _saves = [0]

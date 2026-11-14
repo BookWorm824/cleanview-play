@@ -14,7 +14,7 @@ try:                    # {"repo": "...", "branch": "main"}; a missing or broken
     CONFIG = json.loads((HERE / "update.json").read_text())   # mustn't stop CleanView opening
     CONFIG["repo"]          # (CleanListen 1.14.3: a fresh install had none)
 except Exception:
-    CONFIG = {"repo": "BookWorm824/cleanview", "branch": "main"}
+    CONFIG = {"repo": "BookWorm824/cleanview-play", "branch": "main"}
 RAW = f"https://raw.githubusercontent.com/{CONFIG['repo']}/{CONFIG.get('branch', 'main')}/"
 
 
@@ -31,7 +31,7 @@ def _ver(s):
 # would load first.) CleanView-work.exe, from python.exe, runs the picture scan and pip.
 # The changed .exe has no signature, so Smart App Control would block it: it's only made
 # while that's off, and only used once a test run of it has worked.
-APP_NAME = "CleanView"
+APP_NAME = "CleanView Play"
 OWN_EXE = APP_NAME + ".exe"
 WORK_EXE = APP_NAME + "-work.exe"
 OWN_BUILD = 1          # raise to make every copy again
@@ -258,7 +258,7 @@ def as_own_exe():
 # that window forward instead. "Update now" starts a new one while the old one closes: it
 # waits for the old one to let go (RESTART_WAIT).
 APP_PART = "--app"
-ONE_NAME = os.environ.get("CLEANVIEW_ONE_NAME") or "Local\\CleanView-open"
+ONE_NAME = os.environ.get("CLEANVIEW_ONE_NAME") or "Local\\CleanView-Play-open"
 OPENING_NAME = ONE_NAME + "-opening"
 RESTART_WAIT = 90
 SPLASH_MOST = 180             # seconds; the window says "Opening" at most this long
@@ -551,7 +551,7 @@ def run_app():
     try:
         new = update()
         if new:
-            note = f"CleanView was updated to version {new}."
+            note = f"{APP_NAME} was updated to version {new}."
     except Exception as ex:  # never block the app over an update problem
         try:
             (HERE / "update_error.txt").write_text(str(ex), encoding="utf8")

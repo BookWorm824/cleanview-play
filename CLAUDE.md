@@ -1,3 +1,88 @@
+# CleanView Play: read this first
+
+CleanView Play is CleanView without saving: it finds exactly what CleanView finds, and
+"Play now" plays the **original** video with what's ticked muted and skipped. No clean copy
+is written. The owner, 2026-11-13: "this will be for the play only clean view no saving - you
+will update filters and such from the original cleanview...the original clean view you won't
+touch", then "keeping clean view as a save program only add a play now feature for now"
+(and: in CleanView Play, not in CleanView).
+
+## Rules for this repo
+
+- **Never edit the original CleanView** (`..\cleanview-repo`, github BookWorm824/cleanview,
+  the installed `%LOCALAPPDATA%\CleanView`). Read only: no staging, stashing, resetting,
+  commits or pushes there. It has another chat's work in progress.
+- **Filters and fixes come across from CleanView, never the other way.** This repo is a
+  clone of it: the remote `original` points at `..\cleanview-repo` (its push address is
+  blocked on purpose). The "CleanView" chat sends each release's commits; bring them in with
+  `git fetch original` and `git merge <commit>` (or cherry-pick), then fix what the merge
+  touches here. Copy from commits, not from its working copy. Brought in so far: 1.18.90
+  (e2d32b6, the start), 1.18.91 (b54b7c7, 2026-11-14; its tests/support.py hiding
+  replaced CleanView Play's own copy of the same) and 1.18.92 (8d93abc, 2026-11-14). Keep changes to shared files
+  small so merges stay easy; Play's own code goes in its own files.
+- Its own program: `%LOCALAPPDATA%\CleanView Play` (APP_DATA in every module), the lock
+  `Local\CleanView-Play-open`, `CleanView Play.exe` / `CleanView Play-work.exe`, the
+  shortcut "CleanView Play", updates from `BookWorm824/cleanview-play` (`update.json`;
+  that GitHub repo doesn't exist yet: create it only with the owner's yes).
+- `version.json` has its own `version` (1.0.0 onwards) and `based_on`, the CleanView
+  version its finding comes from; bump `based_on` when merging a CleanView release.
+  `engine.app_version()` says "Play 1.0.0 / 1.18.90", so reports sent to the shared inbox
+  say which app made them (and sent files say `"app": "CleanView Play"`).
+
+## What's different from CleanView
+
+- `cvplay.py`: `play_list(st, cuts, lines, words, quiet)` works out the same mutes, cuts,
+  long-mute cuts and quieter music as `render()`, as mpv filters: `af` (render's own
+  `_mute_filters` and `_quieter`, with the cuts silent too), `vf` (black over each cut) and
+  `skips`. `entry()` adds the file, title and the sound track CleanView listened to
+  (`info.audio.index`). `write_list()` saves `APP_DATA\play\now.json` (times and file names
+  only). `play()` starts mpv (`--no-config`, `--script=cvplay.lua`, no captions) with the
+  list's path in `CVPLAY_LIST`; pressing Play now again closes the player first.
+  `get_player()` downloads mpv once (shinchiro's Windows build, the newest from GitHub's
+  API, else `PLAYER_FALLBACK`) into `app\bin\mpv`, unpacked with Windows' own `tar.exe`
+  (it reads .7z). `PlayError`/`Moved` messages are shown to her as they are.
+- `cvplay.lua` (inside mpv): per file, on `on_preloaded`, picks the sound track by
+  `ff-index`, sets `af`/`vf` and the title; on `time-pos` it jumps past a cut (a frame early;
+  a cut to the end goes to the next video). Dragging the seek bar into a cut jumps past it.
+- The review page: "▶ Play now" instead of "Save clean copy"; the save folder / size row
+  is gone; the review stays open (change a tick, play again) and is saved for "Pick up
+  where I left off". `_gather_choices()` is the old first half of `_save_from_review()`.
+- The start page has 3 steps: no "Save to" (its pane is still built, never shown).
+- `render()`, the done page and the save code are untouched and unused, to keep merges easy.
+- Tests: `tests/test_play.py`; tests that checked the save folder row or step 4 are skipped
+  with a reason; names updated (`support.APP_DATA` is `CleanView Play`). `RealPlayer` runs
+  the real mpv hidden (`--vo=null --ao=pcm`, sound to a file) when `bin\mpv` is there (it's
+  not in git: `.gitignore` has `bin/`).
+- Nothing pops up while tests run (the owner, 2026-11-13): `support.py` makes every Tk window
+  see-through, records `os.startfile` and Explorer/Notepad launches in `support.OPENED`, and
+  silences winsound. Two check-failed tests used to open `cleanview_last_error.txt` in
+  Notepad for real.
+
+## Checked with the real player (2026-11-14, mpv 0.42.0 from shinchiro's build)
+
+A 20-second made-up video whose tone is 200 + 50 x the second in Hz, played hidden through
+`cvplay.command` + `cvplay.lua`, with what was heard read back second by second: a word muted
+at 3-4 s and a line at 7.5-8.5 s silent to within 0.05 s; a scene cut at 12-15 s skipped with
+no gap (second 11 runs into 15); the same in a .ts whose own clock starts at 11.4 s (mpv's
+lavfi `t` is the rebased clock); the second sound track picked by `ff-index`; two videos in a
+row each with only its own list; a cut to the end stops there; a mute and a cut at 0 s. Frames
+shown: none of a cut's picture; at the jump one or two black frames (the cover; the frame at
+exactly the cut's end is black, as render() drops it).
+
+## Not checked yet
+
+- In a real window on her PC (all the checks were hidden): hardware decoding with the
+  filters on (`--hwdec=auto-copy`), the on-screen controls, full screen, a big Blu-ray rip,
+  surround sound.
+- Watching on the TV through Jellyfin/Roku (the owner wants both): later. Jellyfin's Roku
+  app can't mute on cue by itself; skips might be possible through Jellyfin's media
+  segments. Nothing built.
+
+Everything below is CleanView's own brief, as inherited at 1.18.90. Where it says "saves",
+"clean copy" or "render", CleanView Play plays instead.
+
+---
+
 # CleanView: project brief
 
 CleanView is a Windows desktop app that makes family-friendly copies of movies and TV episodes

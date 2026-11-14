@@ -18,7 +18,7 @@ import subprocess
 import time
 from pathlib import Path
 
-APP_DATA = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "CleanView"
+APP_DATA = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "CleanView Play"
 ACCOUNTS = APP_DATA / "accounts"
 HOME_VAR = {"claude": "CLAUDE_CONFIG_DIR", "chatgpt": "CODEX_HOME", "gemini": "GEMINI_CLI_HOME"}
 

@@ -159,7 +159,7 @@ class Steps(unittest.TestCase):
     def test_starts_on_step_one_and_shows_only_that(self):
         self.assertEqual(self.shown(), [1])
         self.assertEqual(self.app._step_title.cget("text"), "Movie or episodes")
-        self.assertEqual(self.app._step_tag.cget("text"), "STEP 1 OF 4")
+        self.assertEqual(self.app._step_tag.cget("text"), "STEP 1 OF 3")
         self.assertFalse(self.app.back_btn.winfo_manager(), "nothing to go back to")
         self.assertEqual(self.app.next_btn.cget("text"), "Next: What to remove")
 
@@ -167,12 +167,11 @@ class Steps(unittest.TestCase):
         self.app.next_btn.invoke()
         self.assertEqual(self.shown(), [2])
         self.app.next_btn.invoke()
-        self.app.next_btn.invoke()
-        self.assertEqual(self.shown(), [4])
+        self.assertEqual(self.shown(), [3])      # CleanView Play: no "Save to" step
         self.assertFalse(self.app.next_btn.winfo_manager(), "the last step")
         self.assertTrue(self.app.start_btn.winfo_manager(), "Start cleaning on every step")
         self.app.back_btn.invoke()
-        self.assertEqual(self.shown(), [3])
+        self.assertEqual(self.shown(), [2])
 
     def test_every_setting_is_there_whichever_step_shows(self):
         for k in list(ui.FILTER_KEYS) + ["ai", "reader", "look"]:
@@ -223,7 +222,7 @@ class Steps(unittest.TestCase):
         app.opts["ai"].set(False)
         self.assertEqual(said(3), "Off")
         app.opts["ai"].set(True)
-        self.assertEqual(said(4), "Next to the videos")
+        self.assertEqual(len(app._step_rows), 3)        # CleanView Play: no "Save to" step
         app.profile_var.set("young")
         app._profile_changed()
 

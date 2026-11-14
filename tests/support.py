@@ -30,7 +30,7 @@ os.environ["CLEANVIEW_INBOX"] = NO_INBOX
 # "Is there internet?" (Start cleaning asks): yes, without trying. A test that wants no
 # internet sets it to "0".
 os.environ["CLEANVIEW_ONLINE"] = "1"
-APP_DATA = SANDBOX / "CleanView"
+APP_DATA = SANDBOX / "CleanView Play"
 (APP_DATA / "learned").mkdir(parents=True)
 sys.path.insert(0, str(ROOT))
 atexit.register(shutil.rmtree, SANDBOX, ignore_errors=True)

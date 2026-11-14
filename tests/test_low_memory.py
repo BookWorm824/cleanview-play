@@ -124,7 +124,7 @@ class LauncherWithoutUpdateJson(unittest.TestCase):
         for text in (None, "", "{not json", "{}"):
             mod = self.load(text)
             self.assertEqual(mod.RAW,
-                             "https://raw.githubusercontent.com/BookWorm824/cleanview/main/")
+                             "https://raw.githubusercontent.com/BookWorm824/cleanview-play/main/")
 
     def test_its_own_still_used(self):
         mod = self.load(json.dumps({"repo": "someone/else", "branch": "test"}))

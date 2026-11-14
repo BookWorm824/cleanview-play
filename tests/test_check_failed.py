@@ -47,9 +47,12 @@ class CheckFailed(unittest.TestCase):
         cls.put_back()
 
     def setUp(self):
-        for f in support.APP_DATA.glob("CleanView couldn't check*.json"):
+        for f in support.APP_DATA.glob("CleanView Play couldn't check*.json"):
             f.unlink()
         self.asked, self.told, self.sent, self.by_hand = [], [], [], []
+        # a "yes" from the test before mustn't answer a box that comes late, such as "Open
+        # that file now?" (it opened Notepad on the owner's screen, 2026-11-13)
+        ui.messagebox.askyesno = lambda t, m, **k: self.asked.append((t, m)) or False
         ui.learn.send_url = lambda: support.NO_INBOX
         ui.learn.send = lambda path, kind: self.sent.append((Path(path), kind))
         ui.messagebox.showinfo = lambda t, m, **k: self.told.append(m)
@@ -91,16 +94,16 @@ class CheckFailed(unittest.TestCase):
     def test_no_sends_nothing(self):
         self.fail(False, self.UNEXPECTED)
         self.assertEqual(self.sent, [])
-        self.assertEqual(list(support.APP_DATA.glob("CleanView couldn't check*.json")), [])
+        self.assertEqual(list(support.APP_DATA.glob("CleanView Play couldn't check*.json")), [])
 
     def test_yes_sends_the_note(self):
         self.fail(True, self.UNEXPECTED)
         self.assertEqual(len(self.sent), 1)
         path, kind = self.sent[0]
         self.assertEqual(kind, "problem")
-        self.assertTrue(path.name.startswith("CleanView couldn't check "))
+        self.assertTrue(path.name.startswith("CleanView Play couldn't check "))
         note = json.loads(path.read_text(encoding="utf8"))
-        self.assertEqual(note["app"], "CleanView")
+        self.assertEqual(note["app"], "CleanView Play")
         self.assertEqual(note["what"], "couldn't check a video")
         self.assertEqual(note["version"], ui._app_version())
         self.assertIn("KeyError: 'x'", note["note"])
