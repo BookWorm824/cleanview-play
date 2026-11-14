@@ -33,6 +33,14 @@ def st_with(**kw):
     return st
 
 
+CUES = [{"s": 10.0, "e": 12.0, "text": "Oh hell, not again."},
+        {"s": 14.0, "e": 15.0, "text": "Damn it all"},
+        {"s": 23.5, "e": 24.5, "text": "A muted line"},
+        {"s": 31.0, "e": 33.0, "text": "In the cut"},
+        {"s": 28.0, "e": 32.0, "text": "Runs into the cut"},
+        {"s": 45.0, "e": 46.0, "text": "Nice day."}]
+
+
 class PlayList(unittest.TestCase):
     def test_the_ticked_scene_is_skipped_the_unticked_one_not(self):
         e = cvplay.play_list(support.sample_review())
@@ -92,6 +100,35 @@ class PlayList(unittest.TestCase):
         self.assertEqual(e["path"], str(support.SANDBOX / "Sample Show S01E01.mp4"))
         self.assertEqual(e["title"], "Sample Show S01E01")
         self.assertEqual(e["audio_index"], 1)
+
+
+class Subtitles(unittest.TestCase):
+    # the owner, 2026-11-14: "people can still access subtitles in some way right? i just
+    # didn't like the bubble thing". Clean ones, off unless turned on.
+    def test_clean_like_a_saved_copy_but_on_the_files_own_clock(self):
+        cues = cvplay.entry(st_with(cues=CUES))["cues"]
+        self.assertEqual(cues, [
+            {"s": 10.0, "e": 12.0, "text": "Oh \u2014, not again."},     # language blanked
+            {"s": 14.0, "e": 15.0, "text": "\u2014 it all"},
+            {"s": 28.0, "e": 30.0, "text": "Runs into the cut"},          # the part before it
+            {"s": 45.0, "e": 46.0, "text": "Nice day."}])                 # not moved up
+        # the muted line (23-25) and the one inside the cut (30-38) are left out
+
+    def test_no_subtitles_none_offered(self):
+        self.assertEqual(cvplay.entry(st_with(cues=[]))["cues"], [])
+
+    def test_each_video_gets_its_own_file(self):
+        a, b = cvplay.entry(st_with(cues=CUES)), cvplay.entry(st_with(cues=[]))
+        path = cvplay.write_list([a, b])
+        videos = json.loads(path.read_text(encoding="utf8"))["videos"]
+        srt = Path(videos[0]["srt"])
+        self.assertEqual(srt, support.APP_DATA / "play" / "subtitles 1.srt")
+        text = srt.read_text(encoding="utf8")
+        self.assertIn("00:00:10,000 --> 00:00:12,000\nOh \u2014, not again.", text)
+        self.assertNotIn("hell", text)
+        self.assertNotIn("srt", videos[1])
+        self.assertNotIn("cues", videos[0], "the list itself stays small")
+        self.assertIn("cues", a, "what it was given is left as it was")
 
 
 class Player(unittest.TestCase):
@@ -420,6 +457,40 @@ class OnTheReviewPage(unittest.TestCase):
         self.assertTrue(proc.stopped)
         self.app.watching = None
 
+    def test_the_window_keeps_answering_while_it_gets_ready(self):
+        # 2026-11-14: "when it first opened it said not responding for a few seconds". The
+        # mutes and subtitles are worked out, and the review saved, in the background.
+        where, real_entry, real_write = [], cvplay.entry, self.app._write_session
+
+        def entry(*a, **k):
+            where.append(("entry", threading.current_thread() is threading.main_thread()))
+            return real_entry(*a, **k)
+
+        def write(*a, **k):
+            where.append(("save", threading.current_thread() is threading.main_thread()))
+            return real_write(*a, **k)
+        with mock.patch.object(ui.cvplay, "entry", entry),                 mock.patch.object(self.app, "_write_session", write):
+            self.press_play()
+        self.assertEqual(sorted(set(where)), [("entry", False), ("save", False)])
+
+    def test_subtitles_button(self):
+        self.press_play()
+        w = self.app.watching
+        self.run_ticks(1)
+        self.assertFalse(w.subs_btn.winfo_manager(), "no subtitles in this one: no button")
+        w.entries[0]["cues"] = [{"s": 1.0, "e": 2.0, "text": "Hello"}]
+        self.run_ticks(1)
+        self.assertTrue(w.subs_btn.winfo_manager())
+        self.assertEqual(w.subs_btn.cget("text"), "Subtitles: Off")
+        w._do("subs")
+        self.assertEqual(w.remote.sent, [("script-message", "cvplay-subs")])
+        w.remote.state["sid"] = 3
+        self.run_ticks(1)
+        self.assertEqual(w.subs_btn.cget("text"), "Subtitles: On")
+        w.remote.state["sid"] = False
+        self.run_ticks(1)
+        self.assertEqual(w.subs_btn.cget("text"), "Subtitles: Off")
+
     def test_a_changed_tick_plays_with_the_change(self):
         for v, j, sc in self.app.scene_vars:
             v.set(sc["s"] == 60.0)              # the kiss ticked, the fight unticked
@@ -629,6 +700,35 @@ class RealPlayer(unittest.TestCase):
         r.close()
         self.assertTrue(r.gone.wait(5))
         self.assertIsNotNone(proc.poll(), "the player closed")
+
+    def test_clean_subtitles_turn_on_and_off(self):
+        # off at first, the clean ones when turned on (never the video's own), off again
+        st = self.sample(cues=[{"s": 0.0, "e": 9.5, "text": "Oh hell, it's a tone."}],
+                         groups=["mild"])
+        e = cvplay.entry(st)
+        proc = cvplay.play([e], cvplay.player(),
+                           extra=["--vo=null", "--ao=null", "--force-window=no"])
+        r = cvplay.Remote(proc.pipe, proc)
+        self.addCleanup(r.close)
+        self.assertTrue(r.ready.wait(15), "reached the player")
+        r.send("observe_property", 99, "sub-text")
+
+        def until(test, secs=8.0):
+            stop = time.monotonic() + secs
+            while time.monotonic() < stop:
+                if test():
+                    return True
+                time.sleep(0.05)
+            return False
+        self.assertTrue(until(lambda: (r.state.get("time-pos") or 0) > 0.5))
+        self.assertIn(r.state.get("sid"), (False, "no"))
+        self.assertFalse(r.state.get("sub-text"))
+        r.send("script-message", "cvplay-subs")
+        self.assertTrue(until(lambda: r.state.get("sid") not in (None, False, "no")))
+        self.assertTrue(until(lambda: r.state.get("sub-text")), r.state)
+        self.assertEqual(r.state["sub-text"], "Oh \u2014, it's a tone.")
+        r.send("script-message", "cvplay-subs")
+        self.assertTrue(until(lambda: r.state.get("sid") in (False, "no")))
 
     @unittest.skipUnless(os.name == "nt", "the picture inside the window is for Windows")
     def test_it_plays_inside_the_window(self):

@@ -72,6 +72,19 @@ touch", then "keeping clean view as a save program only add a play now feature f
   deadlock reading and writing at once on Windows). Stop or the end uncovers the review as it
   was; mpv's warnings go to `APP_DATA\play\player.txt` (`player_said()`), saved in the details
   file if it closes before the picture starts.
+- Subtitles (1.0.5; the owner: "people can still access subtitles in some way right? i just
+  didn't like the bubble thing"): a "Subtitles: Off/On" button (and the C key) over the
+  time, only for a video that has subtitles. They're clean ones, never the video's own
+  track: `cvplay.subtitles` uses `engine.clean_cues` (language blanked as —, muted lines
+  left out) on the file's own clock (cuts trimmed, nothing shifted), and `write_list` writes
+  `play\subtitles N.srt`. cvplay.lua `sub-add`s it on file-loaded, off unless turned on
+  ("script-message cvplay-subs"), and keeps it on for the next video. `Remote` watches `sid`.
+- Play now keeps the window answering (1.0.5; the owner: "when it first opened it said not
+  responding for a few seconds"): only reading the ticks (`_gather_choices(write=False)`,
+  `_session_info`) runs on the window's thread; `cvplay.entry` (subtitle cleaning is ~2 s for
+  a 2-hour movie) and `_write_session` (every analysis.json, written once now, not twice)
+  run in the "play now" thread. Measured hidden on a real 2-hour review: 2.4 s → 0.01 s.
+  The player starting inside the window held it up 0.04 s at most (hidden and off-screen).
 - The review page: "▶ Play now" instead of "Save clean copy"; the save folder / size row
   is gone; the review stays open (change a tick, play again) and is saved for "Pick up
   where I left off". `_gather_choices()` is the old first half of `_save_from_review()`.

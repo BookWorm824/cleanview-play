@@ -416,7 +416,8 @@ class Watching(tk.Frame):
     STEP = 10                   # seconds back or forward, of what's seen
     extra = ()                  # more player options (tests: no sound)
     KEYMAP = {"<space>": "pause", "<Left>": "back", "<Right>": "forward", "<Up>": "louder",
-              "<Down>": "quieter", "<f>": "fullscreen", "<F>": "fullscreen", "<Escape>": "esc"}
+              "<Down>": "quieter", "<f>": "fullscreen", "<F>": "fullscreen", "<Escape>": "esc",
+              "<c>": "subs"}
 
     def __init__(self, app, entries, on_done):
         super().__init__(app, bg=PLAYER_BG)
@@ -457,6 +458,8 @@ class Watching(tk.Frame):
         self.time_lbl = tk.Label(top, text="", bg=PLAYER_BAR, fg=PLAYER_DIM, font=(FONT, 12),
                                  anchor="e")
         self.time_lbl.pack(side="right")
+        # clean subtitles, off unless turned on (2026-11-14), for a video that has them
+        self.subs_btn = self._button(top, "Subtitles: Off", "subs", show=False)
         self.pos = tk.Canvas(self.bar, height=X(24), bg=PLAYER_BAR, highlightthickness=0,
                              cursor="hand2")
         self.pos.pack(fill="x", padx=X(16))
@@ -573,6 +576,8 @@ class Watching(tk.Frame):
             self._loud = time.monotonic()
         elif what == "next":
             self.remote.send("playlist-next", "force")
+        elif what == "subs":
+            self.remote.send("script-message", "cvplay-subs")      # cvplay.lua
 
     def _full(self, on):
         self.full = on
@@ -619,6 +624,14 @@ class Watching(tk.Frame):
         n, pos = len(self.entries), st.get("playlist-pos") or 0
         self.title_lbl.config(text=v.get("title", "") + (f"   ({pos + 1} of {n})" if n > 1 else ""))
         self.pause_btn.config(text="▶  Play" if st.get("pause") else "❚❚  Pause")
+        has_subs = bool(v.get("cues"))
+        if has_subs != bool(self.subs_btn.winfo_manager()):
+            if has_subs:
+                self.subs_btn.pack(side="right", padx=(0, self.app._px(16)))
+            else:
+                self.subs_btn.pack_forget()
+        on = st.get("sid") not in (None, False, "no")
+        self.subs_btn.config(text="Subtitles: On" if on else "Subtitles: Off")
         more = n > 1 and pos < n - 1
         if more != bool(self.next_btn.winfo_manager()):
             if more:
@@ -669,6 +682,11 @@ class Watching(tk.Frame):
         if e.widget is not self or self.closing:
             return
         self.closing = True
+        if self._tick_id:
+            try:
+                self.after_cancel(self._tick_id)
+            except tk.TclError:
+                pass
         if self.proc is not None and self.proc.poll() is None:
             try:
                 self.proc.terminate()
@@ -786,14 +804,23 @@ class App(tk.Tk):
                 self._sync_job(j)
             except Exception:
                 pass
-            try:
-                (Path(j["work"]) / "analysis.json").write_text(json.dumps(j["analysis"], indent=1))
-            except OSError:
-                pass
-        sess = {"saved": time.strftime("%Y-%m-%d %H:%M"), "outdir": self.outdir,
+        return self._write_session(good, self._session_info(good))
+
+    def _session_info(self, good):
+        return {"saved": time.strftime("%Y-%m-%d %H:%M"), "outdir": self.outdir,
                 "jobs": [{"video": j["video"], "work": str(j["work"])} for j in good],
                 "show_fine": getattr(self, "show_fine", False),
-                "chat": getattr(self, "chat_history", [])[-60:]}
+                "chat": list(getattr(self, "chat_history", [])[-60:])}
+
+    def _write_session(self, good, sess):
+        """Write each video's analysis and the review file. No window work, so Play now
+        does it in the background (CleanView Play 1.0.5: a season on a slow laptop held
+        the window up long enough for Windows to say "Not responding")."""
+        for j in good:
+            try:
+                (Path(j["work"]) / "analysis.json").write_text(json.dumps(j["analysis"], indent=1))
+            except (OSError, RuntimeError, ValueError):
+                pass
         try:
             APP_DATA.mkdir(parents=True, exist_ok=True)
             self.SESSION.write_text(json.dumps(sess, indent=1), encoding="utf8")
@@ -4101,18 +4128,15 @@ class App(tk.Tk):
     def _play_from_review(self):
         """Play the originals with what's ticked now muted and cut (CleanView Play: no copy).
         Her ticks are learned and kept as for saving; the review stays open."""
-        good = self._gather_choices()
+        # Only reading the ticks is done here; working out the mutes and subtitles, saving
+        # the review and getting the player are done in the background, so the window keeps
+        # answering (1.0.5: "when it first opened it said not responding for a few seconds")
+        good = self._gather_choices(write=False)
         if not good:
             return
-        try:
-            entries = [cvplay.entry(j["analysis"], j["cuts"], j["lines"], j["words"],
-                                    j["quiet"]) for j in good]
-        except Exception as ex:
-            save_details(traceback.format_exc())
-            messagebox.showerror("CleanView Play", f"Couldn't get it ready to play. "
-                                 f"{plain_error(ex)}", parent=self)
-            return
-        self._save_session()            # "Pick up where I left off" opens it with these ticks
+        sess = self._session_info(good)
+        picks = [(j["analysis"], list(j["cuts"]), list(j["lines"]), list(j["words"]),
+                  list(j["quiet"])) for j in good]
 
         def say(text):
             lbl = getattr(self, "play_lbl", None)
@@ -4125,7 +4149,7 @@ class App(tk.Tk):
             say(PLAY_SAID)
             messagebox.showerror("CleanView Play", f"Couldn't play it. {why}", parent=self)
 
-        def watch(exe):             # here, in the window (2026-11-14), not a window of its own
+        def watch(entries, exe):    # here, in the window (2026-11-14), not a window of its own
             if self.page_name != "review":
                 return
             old = getattr(self, "watching", None)
@@ -4155,19 +4179,30 @@ class App(tk.Tk):
 
         def go():
             try:
+                entries = [cvplay.entry(*p) for p in picks]
+            except Exception as ex:
+                tb = traceback.format_exc()
+                self.q.put(("call", lambda ex=ex: (save_details(tb), say(PLAY_SAID),
+                                                   messagebox.showerror(
+                    "CleanView Play", f"Couldn't get it ready to play. {plain_error(ex)}",
+                    parent=self))))
+                return
+            self._write_session(good, sess)     # "Pick up where I left off" opens these ticks
+            try:
                 exe = cvplay.player() or cvplay.get_player(
                     lambda f, m: self.q.put(("call", lambda m=m, f=f: say(
                         f"{m}  {int(f * 100)}%" if 0 < f < 1 else m))))
-                self.q.put(("call", lambda: watch(exe)))
+                self.q.put(("call", lambda: watch(entries, exe)))
             except Exception as ex:
                 tb = traceback.format_exc()
                 self.q.put(("call", lambda ex=ex: failed(ex, tb)))
         say("Getting it ready to play…")
         threading.Thread(target=go, daemon=True, name="play now").start()
 
-    def _gather_choices(self):
+    def _gather_choices(self, write=True):
         """Every tick on the review page into each video's cuts, lines, words and quiet music,
-        learned and kept in its analysis. The videos that were checked."""
+        learned and kept in its analysis. The videos that were checked. write=False: the
+        analyses are synced but not written (Play now writes them in the background)."""
         for j in self.jobs:
             j["cuts"], j["lines"], j["words"], j["quiet"] = [], [], [], []
         for v, j, m in self.word_vars:
@@ -4195,7 +4230,9 @@ class App(tk.Tk):
         for j in good:                  # the final choices, for the "what we refined" export
             try:
                 self._sync_job(j)
-                (Path(j["work"]) / "analysis.json").write_text(json.dumps(j["analysis"], indent=1))
+                if write:
+                    (Path(j["work"]) / "analysis.json").write_text(
+                        json.dumps(j["analysis"], indent=1))
             except Exception:
                 pass
         return good

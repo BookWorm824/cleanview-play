@@ -93,6 +93,7 @@ if os.getenv("CVPLAY_REMOTE") then
         UP = "louder", DOWN = "quieter", WHEEL_UP = "louder", WHEEL_DOWN = "quieter",
         ["f"] = "fullscreen", ["F"] = "fullscreen", MBTN_LEFT_DBL = "fullscreen",
         ESC = "esc", ["q"] = "stop", STOP = "stop", NEXT = "next",
+        ["c"] = "subs",
     }
     for key, what in pairs(keys) do
         mp.add_forced_key_binding(key, "cvplay-" .. key, function()
@@ -100,3 +101,40 @@ if os.getenv("CVPLAY_REMOTE") then
         end)
     end
 end
+
+-- Clean subtitles (the owner, 2026-11-14: "people can still access subtitles in some way
+-- right?"): each video's own .srt from CleanView Play, with the language blanked and muted
+-- lines and cut scenes left out. Off unless turned on with the window's Subtitles button
+-- ("script-message cvplay-subs"); once on, they stay on for the next video. The video's own
+-- subtitle tracks are never shown: they'd show the words that are muted.
+local subs_on = false
+local clean_sid = nil
+
+mp.register_event("file-loaded", function()
+    clean_sid = nil
+    if current and current.srt then
+        mp.commandv("sub-add", current.srt, "auto", "Subtitles (clean)")
+        for _, t in ipairs(mp.get_property_native("track-list") or {}) do
+            if t.type == "sub" and t.external then
+                clean_sid = t.id
+            end
+        end
+    end
+    if subs_on and clean_sid then
+        mp.set_property_number("sid", clean_sid)
+    else
+        mp.set_property("sid", "no")
+    end
+end)
+
+mp.register_script_message("cvplay-subs", function()
+    if not clean_sid then
+        return
+    end
+    subs_on = not subs_on
+    if subs_on then
+        mp.set_property_number("sid", clean_sid)
+    else
+        mp.set_property("sid", "no")
+    end
+end)

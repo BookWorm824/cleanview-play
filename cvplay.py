@@ -90,7 +90,33 @@ def play_list(st, cuts=None, lines=None, words=None, quiet=None):
     return {"skips": [[round(s, 3), round(e, 3)] for s, e in cut_rs],
             "af": _lavfi(af), "vf": _lavfi(vf),
             "mutes": len(mute_rs), "long": len(long_rs),
-            "cut_seconds": round(sum(e - s for s, e in cut_rs), 1)}
+            "cut_seconds": round(sum(e - s for s, e in cut_rs), 1),
+            "cues": subtitles(st, mute_rs, cut_rs, line_rs)}
+
+
+def subtitles(st, mute_rs, cut_rs, line_rs):
+    """Clean subtitles, off unless turned on (the owner, 2026-11-14: "people can still access
+    subtitles in some way right?"). The same cleaning a saved clean copy's subtitles get
+    (`engine.clean_cues`: the language blanked as —, muted lines and cut scenes left out), on
+    the file's own clock: nothing moves up, since the cuts are jumped past, not removed."""
+    cues = st.get("cues") or []
+    if not cues:
+        return []
+    cats = [c for g in st.get("groups", []) for c in engine.cl.GROUPS[g]]
+    out = []
+    for c in engine.clean_cues(cues, cats, mute_rs, [], line_rs, engine.my_words(st.get("opts"))):
+        s, e = c["s"], c["e"]
+        if any(a <= s and e <= b for a, b in cut_rs):
+            continue
+        for a, b in cut_rs:                 # partly inside a cut: the part outside
+            if a < e and b > s:
+                if a > s:
+                    e = min(e, a)
+                else:
+                    s = max(s, b)
+        if e - s >= 0.3:
+            out.append({"s": round(s, 3), "e": round(e, 3), "text": c["text"]})
+    return out
 
 
 def _lavfi(filters):
@@ -112,8 +138,17 @@ def write_list(entries, folder=None):
     folder = Path(folder or APP_DATA / "play")
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / "now.json"
+    videos = []
+    for n, e in enumerate(entries, 1):  # each video's clean subtitles in a file of their own
+        e = dict(e)
+        cues = e.pop("cues", None)
+        if cues:
+            srt = folder / f"subtitles {n}.srt"
+            engine.write_srt(cues, srt)
+            e["srt"] = str(srt)
+        videos.append(e)
     tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"made": time.time(), "videos": entries}, indent=1), encoding="utf8")
+    tmp.write_text(json.dumps({"made": time.time(), "videos": videos}, indent=1), encoding="utf8")
     os.replace(tmp, path)
     return path
 
@@ -315,7 +350,7 @@ class Remote:
     keys and clicks on the picture (cvplay.lua) come in on `keys`. `gone` is set once the
     player has closed, or couldn't be reached."""
     WATCH = ("pause", "time-pos", "duration", "playlist-pos", "playlist-count", "volume",
-             "media-title")
+             "media-title", "sid")
 
     def __init__(self, pipe, proc=None, wait=20.0):
         self.pipe, self.proc = pipe, proc
