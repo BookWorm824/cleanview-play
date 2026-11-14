@@ -18,7 +18,7 @@ touch", then "keeping clean view as a save program only add a play now feature f
   `git fetch original` and `git merge <commit>` (or cherry-pick), then fix what the merge
   touches here. Copy from commits, not from its working copy. Brought in so far: 1.18.90
   (e2d32b6, the start), 1.18.91 (b54b7c7, 2026-11-14; its tests/support.py hiding
-  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock) and 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her"). Keep changes to shared files
+  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her") and 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words). Keep changes to shared files
   small so merges stay easy; Play's own code goes in its own files.
 - Its own program: `%LOCALAPPDATA%\CleanView Play` (APP_DATA in every module), the lock
   `Local\CleanView-Play-open`, `CleanView Play.exe` / `CleanView Play-work.exe`, the
@@ -94,6 +94,8 @@ touch", then "keeping clean view as a save program only add a play now feature f
   warnings into the problem note offered next start. If her laptop still freezes, that note
   says where: a MainThread stack inside Tk's own loop would point at Windows tying the
   window's input to mpv's child window (cross-process `--wid`), not at our code.
+  Fixed: the owner, 2026-11-14, on 1.0.7: "the new player works well", and "Not
+  responding" no longer shows when it opens.
 - The review page: "▶ Play now" instead of "Save clean copy"; the save folder / size row
   is gone; the review stays open (change a tick, play again) and is saved for "Pick up
   where I left off". `_gather_choices()` is the old first half of `_save_from_review()`.
@@ -488,6 +490,11 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   episodes, from scratch): 2 at once 14.7 min, one after the other 19.2 min, the same closer
   looks; each video is slower at once (13-15 min against 9-10) but both are done sooner, so
   the default of 2 stays.
+- "sleeping with her" as CleanListen 1.17.37 has it (1.18.97, 2026-11-14): the small words
+  that may follow "her" are CleanListen's `SLEEP_HER_NEXT` (a new sentence: he, she, the...;
+  time and place: in, at, for, last, before...), so "sleeping with her in Paris" and "...for
+  months" count; "her teddy bear" still doesn't. CleanListen 1.17.37 has blasted, so
+  `WAITING_ON_CLEANLISTEN` is empty again.
 - Men with long hair aren't women (1.18.96, 2026-11-14; the owner: "one thing clean view
   struggles with is men with long hair. it says same sex when they are with women", "i mean
   long hair in general", "if a guy with long hair says i love you it flags same sex"; Selena's
