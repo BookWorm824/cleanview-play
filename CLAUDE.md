@@ -18,7 +18,7 @@ touch", then "keeping clean view as a save program only add a play now feature f
   `git fetch original` and `git merge <commit>` (or cherry-pick), then fix what the merge
   touches here. Copy from commits, not from its working copy. Brought in so far: 1.18.90
   (e2d32b6, the start), 1.18.91 (b54b7c7, 2026-11-14; its tests/support.py hiding
-  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her"), 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words), 1.18.98 (12c0363, 2026-11-14, "Al" isn't "hell", two Aladdin lessons for kids), 1.18.99 (2c0abe6, 2026-11-14, the green bar follows real time, loud music turned down to a tenth) 1.18.100 (5d8abb1, 2026-11-14, the chosen files' line bigger and bolder) 1.18.101 (c7207e1, 2026-11-14, "<show> S1 - (1)" names read as season and episode) and 1.18.102 (6c53cf1, 2026-11-14, "hell'd" and "step out on your wife" caught). Keep changes to shared files
+  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her"), 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words), 1.18.98 (12c0363, 2026-11-14, "Al" isn't "hell", two Aladdin lessons for kids), 1.18.99 (2c0abe6, 2026-11-14, the green bar follows real time, loud music turned down to a tenth) 1.18.100 (5d8abb1, 2026-11-14, the chosen files' line bigger and bolder) 1.18.101 (c7207e1, 2026-11-14, "<show> S1 - (1)" names read as season and episode) 1.18.102 (6c53cf1, 2026-11-14, "hell'd" and "step out on your wife" caught) and 1.18.103 (6c1137c, 2026-11-14, the kissing buttons say "Cut passionate" and "Cut all kisses"). Keep changes to shared files
   small so merges stay easy; Play's own code goes in its own files.
 - Its own program: `%LOCALAPPDATA%\CleanView Play` (APP_DATA in every module), the lock
   `Local\CleanView-Play-open`, `CleanView Play.exe` / `CleanView Play-work.exe`, the
@@ -566,6 +566,10 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   episodes, from scratch): 2 at once 14.7 min, one after the other 19.2 min, the same closer
   looks; each video is slower at once (13-15 min against 9-10) but both are done sooner, so
   the default of 2 stays.
+- The kissing choices say "Cut" (1.18.103, 2026-11-14; the owner: "under the kisses tab when
+  choosing it say "keep" "passonate" "all kisses" arent the 2 redundant", then "yes change"):
+  the buttons read "Keep", "Cut passionate", "Cut all kisses" (the values, `level_names`, are
+  as before, so saved choices are kept). They weren't redundant: passionate keeps pecks.
 - Lauren's Person of Interest S1E2 report (1.18.102, 2026-11-14, adults, the AI helper, made on
   1.18.100; the owner: "Yes, release it"): every mute right, no scenes; two lines went through.
   "How the hell'd you get in here?": `cl._base` now also takes a joined-on 'd, 'll, 're or 've
@@ -1789,6 +1793,8 @@ Run from the repo folder with the app's own Python (it has the packages the app 
   `CLEANVIEW_TEST_MULTI`.
 - `test_save_fails.py` (NoRoom): a save that fails on a full drive says where, how much is
   free and what to do, and isn't offered for sending; an unexpected failure still is.
+- `test_kiss_buttons.py`: the kissing buttons say "Cut", set the same levels, and fit the
+  window at Normal and Largest text size.
 - `test_poi_s1e2.py`: listed words with 'd/'ll/'re/'ve joined on found, possessives as before,
   everyday contractions left alone; stepping out on / cheating on a person found and just
   those words muted, stepping out onto a place or cheating on taxes not.
