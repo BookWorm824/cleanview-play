@@ -18,7 +18,7 @@ touch", then "keeping clean view as a save program only add a play now feature f
   `git fetch original` and `git merge <commit>` (or cherry-pick), then fix what the merge
   touches here. Copy from commits, not from its working copy. Brought in so far: 1.18.90
   (e2d32b6, the start), 1.18.91 (b54b7c7, 2026-11-14; its tests/support.py hiding
-  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her"), 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words), 1.18.98 (12c0363, 2026-11-14, "Al" isn't "hell", two Aladdin lessons for kids), 1.18.99 (2c0abe6, 2026-11-14, the green bar follows real time, loud music turned down to a tenth) 1.18.100 (5d8abb1, 2026-11-14, the chosen files' line bigger and bolder) 1.18.101 (c7207e1, 2026-11-14, "<show> S1 - (1)" names read as season and episode) 1.18.102 (6c53cf1, 2026-11-14, "hell'd" and "step out on your wife" caught) and 1.18.103 (6c1137c, 2026-11-14, the kissing buttons say "Cut passionate" and "Cut all kisses"). Keep changes to shared files
+  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her"), 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words), 1.18.98 (12c0363, 2026-11-14, "Al" isn't "hell", two Aladdin lessons for kids), 1.18.99 (2c0abe6, 2026-11-14, the green bar follows real time, loud music turned down to a tenth) 1.18.100 (5d8abb1, 2026-11-14, the chosen files' line bigger and bolder) 1.18.101 (c7207e1, 2026-11-14, "<show> S1 - (1)" names read as season and episode) 1.18.102 (6c53cf1, 2026-11-14, "hell'd" and "step out on your wife" caught), 1.18.103 (6c1137c, 2026-11-14, the kissing buttons say "Cut passionate" and "Cut all kisses") and 1.18.104 (66e0aa8, 2026-11-14, chat cut pictures made in the background, Person of Interest S1E3 misses). Keep changes to shared files
   small so merges stay easy; Play's own code goes in its own files.
 - Its own program: `%LOCALAPPDATA%\CleanView Play` (APP_DATA in every module), the lock
   `Local\CleanView-Play-open`, `CleanView Play.exe` / `CleanView Play-work.exe`, the
@@ -566,6 +566,29 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   episodes, from scratch): 2 at once 14.7 min, one after the other 19.2 min, the same closer
   looks; each video is slower at once (13-15 min against 9-10) but both are done sooner, so
   the default of 2 stays.
+- A chat cut's pictures are made in the background (1.18.104, 2026-11-14; her "CleanView
+  stopped responding" note from Person of Interest S1-(2): asked to end a kiss cut 5 seconds
+  sooner, the chat added the shorter cut and made its three blurred pictures on the window's
+  thread, 40 s on her .wmv). `_chat_reply` calls `apply_chat` without `work`, and
+  `_reviewed` calls `finish_review(..., thumbs=False)`; `_thumbs_later(job)` marks the scenes
+  without pictures (`thumbs` []), makes them in a thread with `engine.make_thumbs` and puts
+  them on the cards when ready (`_thumb_spots`, `_show_thumbs`), then saves the session.
+  Given `work`, the engine still makes them itself (the command line, tests).
+- Lauren's Person of Interest S1E3 report (1.18.104, 2026-11-14, adults, the AI helper, made on
+  1.18.102; the owner: "Yes, do both"): the episode was told from "S1 - (3)" (1.18.101), every
+  mute right, no scenes (violence off, kisses kept). Four lines went through, now caught:
+  "Who's the other woman?" / "Looks like Joey's other woman's got a little girl"
+  (`LINE_WORDS["casual"]`: "who's/who is/who was the other woman", "his/her/Joey's... other
+  woman", just "other woman" muted, `LIST_WORD_TRIM`; not "the other women in the car", "two
+  other men"); "...the land of tequila / and grateful señoritas" (sexref "grateful
+  señorita(s)": split over two lines, a learned line can't catch it); "Latimer screwed us"
+  (`MILD_SLANG`: screwed/screwing us/me/him... (over), "screw us", and from past reviews here
+  "screw with us/me...", "screwed over", "screw Max over"; not "screwed him up", "screwed it
+  in", "the screw you dropped", "screw the lid over"); "Bank robber and a cheat" (the subtitles
+  write "cheet") taught for Person of Interest only, both spellings (casual): "cheater" is
+  mostly games in past reviews ("You big cheater!"). `word_mute` places a phrase whose last
+  word has 's on ("other woman's"). In the 82,372 lines of past reviews here the new finds
+  were these and six "screw" lines, all real. For CleanListen, CleanRead and web/words.js too.
 - The kissing choices say "Cut" (1.18.103, 2026-11-14; the owner: "under the kisses tab when
   choosing it say "keep" "passonate" "all kisses" arent the 2 redundant", then "yes change"):
   the buttons read "Keep", "Cut passionate", "Cut all kisses" (the values, `level_names`, are
@@ -1793,6 +1816,13 @@ Run from the repo folder with the app's own Python (it has the packages the app 
   `CLEANVIEW_TEST_MULTI`.
 - `test_save_fails.py` (NoRoom): a save that fails on a full drive says where, how much is
   free and what to do, and isn't offered for sending; an unexpected failure still is.
+- `test_thumbs_later.py`: a chat cut doesn't wait for its pictures (a slow stand-in), which
+  are put on its card when ready, once; the chat's untick holds; given `work` the engine
+  still makes them.
+- `test_poi_s1e3.py`: someone's other woman found and just "other woman" muted (also said as
+  "woman's"), other women and men left alone; "grateful señoritas" with or without the accent;
+  screwed us / screw with us / screwed over with the mild words, screws and "screwed up" left
+  alone, "screw you" as before; "a cheat" taught for Person of Interest, "cheater" not listed.
 - `test_kiss_buttons.py`: the kissing buttons say "Cut", set the same levels, and fit the
   window at Normal and Largest text size.
 - `test_poi_s1e2.py`: listed words with 'd/'ll/'re/'ve joined on found, possessives as before,
