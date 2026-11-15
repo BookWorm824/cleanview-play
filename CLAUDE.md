@@ -18,7 +18,7 @@ touch", then "keeping clean view as a save program only add a play now feature f
   `git fetch original` and `git merge <commit>` (or cherry-pick), then fix what the merge
   touches here. Copy from commits, not from its working copy. Brought in so far: 1.18.90
   (e2d32b6, the start), 1.18.91 (b54b7c7, 2026-11-14; its tests/support.py hiding
-  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her"), 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words), 1.18.98 (12c0363, 2026-11-14, "Al" isn't "hell", two Aladdin lessons for kids), 1.18.99 (2c0abe6, 2026-11-14, the green bar follows real time, loud music turned down to a tenth) 1.18.100 (5d8abb1, 2026-11-14, the chosen files' line bigger and bolder) and 1.18.101 (c7207e1, 2026-11-14, "<show> S1 - (1)" names read as season and episode). Keep changes to shared files
+  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her"), 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words), 1.18.98 (12c0363, 2026-11-14, "Al" isn't "hell", two Aladdin lessons for kids), 1.18.99 (2c0abe6, 2026-11-14, the green bar follows real time, loud music turned down to a tenth) 1.18.100 (5d8abb1, 2026-11-14, the chosen files' line bigger and bolder) 1.18.101 (c7207e1, 2026-11-14, "<show> S1 - (1)" names read as season and episode) and 1.18.102 (6c53cf1, 2026-11-14, "hell'd" and "step out on your wife" caught). Keep changes to shared files
   small so merges stay easy; Play's own code goes in its own files.
 - Its own program: `%LOCALAPPDATA%\CleanView Play` (APP_DATA in every module), the lock
   `Local\CleanView-Play-open`, `CleanView Play.exe` / `CleanView Play-work.exe`, the
@@ -566,6 +566,18 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   episodes, from scratch): 2 at once 14.7 min, one after the other 19.2 min, the same closer
   looks; each video is slower at once (13-15 min against 9-10) but both are done sooner, so
   the default of 2 stays.
+- Lauren's Person of Interest S1E2 report (1.18.102, 2026-11-14, adults, the AI helper, made on
+  1.18.100; the owner: "Yes, release it"): every mute right, no scenes; two lines went through.
+  "How the hell'd you get in here?": `cl._base` now also takes a joined-on 'd, 'll, 're or 've
+  off (`CONTRACTED`; it took only 's), so "hell'd", "hell're", "damn'd" are found ("he'd",
+  "we'll" aren't listed). "If you're gonna step out on your wife": `LINE_WORDS["casual"]` has
+  "step out on" / "cheat on" + his/her/my... wife/husband/girlfriend/boyfriend/partner/fiancé,
+  and "step out on him/me/you/them/her" (her only with no word after: not "her porch"); not
+  "step out on the balcony", "cheated on his taxes". In the 79,063 lines of past reviews here
+  the only new finds were these two and "my man don't step out on me". For CleanListen,
+  CleanRead and web/words.js too. Her S1E1's 19:10 kiss: the chat's shorter cut (19:10-19:29)
+  worked, the original was unticked by it, but her refined file has the original ticked again
+  (by hand, it seems: the chat's change held in a test of the same steps).
 - Lauren's Person of Interest S1 report (1.18.101, 2026-11-14, adults, the AI helper, made on
   1.18.100; passed on by the CleanListen chat): "Person of Interest S1 - (1).wmv" got "No
   subtitles: couldn't tell which episode this is from its name" and was learned under movies.
@@ -1777,6 +1789,9 @@ Run from the repo folder with the app's own Python (it has the packages the app 
   `CLEANVIEW_TEST_MULTI`.
 - `test_save_fails.py` (NoRoom): a save that fails on a full drive says where, how much is
   free and what to do, and isn't offered for sending; an unexpected failure still is.
+- `test_poi_s1e2.py`: listed words with 'd/'ll/'re/'ve joined on found, possessives as before,
+  everyday contractions left alone; stepping out on / cheating on a person found and just
+  those words muted, stepping out onto a place or cheating on taxes not.
 - `test_poi_names.py`: "<show> S1 - (1)" names read as season and episode, learned under the
   show; years and sizes in brackets not episodes; the names that worked still do.
 - `test_chosen_bigger.py`: the chosen videos' line in Semibold 12, "Nothing chosen yet" as before.
