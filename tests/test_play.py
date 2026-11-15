@@ -1147,6 +1147,22 @@ class OpenWith(unittest.TestCase):
             self.assertNotIn(rf"Software\Classes\{kind}", keys, "the default is left alone")
         self.assertFalse(self.ow.register(self.root / "app", self.reg), "nothing changed")
 
+    def test_a_new_icon_shown_by_a_new_name(self):
+        # CleanView 1.18.107's slight 3D look: Windows keeps an icon's picture by its file name
+        app = self.root / "app"
+        (app / "cleanview.ico").write_bytes(b"old icon")
+        self.ow.register(app, self.reg)
+        key = r"Software\Classes\CleanViewPlay.Media\DefaultIcon"
+        first = Path(self.reg.keys[key][""])
+        self.assertTrue(first.name.startswith("openwith-"))
+        self.assertEqual(first.read_bytes(), b"old icon")
+        (app / "cleanview.ico").write_bytes(b"new icon")
+        self.assertTrue(self.ow.register(app, self.reg))
+        now = Path(self.reg.keys[key][""])
+        self.assertNotEqual(now, first)
+        self.assertEqual(now.read_bytes(), b"new icon")
+        self.assertEqual(list(app.glob("openwith-*.ico")), [now], "the old copy removed")
+
     def test_its_own_name_when_it_has_its_own_exe(self):
         own = self.root / "venv" / "CleanView Play" / "CleanView Play.exe"
         own.parent.mkdir(parents=True)

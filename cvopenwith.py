@@ -39,6 +39,26 @@ def command(root):
     return f'"{exe}" "{root / "app" / "launcher.pyw"}" "%1"'
 
 
+def icon_file(app):
+    """The icon "Open with" shows: a copy of cleanview.ico named by its contents
+    (openwith-<mark>.ico). Windows keeps a picture of an icon by its file's name, so a new
+    cleanview.ico (CleanView 1.18.107's slight 3D look) needs a new name to be shown. Older
+    copies are removed. Falls back to cleanview.ico itself."""
+    import hashlib
+    import shutil
+    icon = app / "cleanview.ico"
+    try:
+        mine = app / f"openwith-{hashlib.sha1(icon.read_bytes()).hexdigest()[:12]}.ico"
+        if not mine.exists():
+            shutil.copy2(icon, mine)
+        for old in app.glob("openwith-*.ico"):
+            if old != mine:
+                old.unlink(missing_ok=True)
+        return mine
+    except OSError:
+        return icon
+
+
 def register(here=HERE, reg=None):
     """Add CleanView Play to "Open with" for the video and music kinds. True if anything was
     written. Quiet: a problem here never stops the app."""
@@ -51,7 +71,7 @@ def register(here=HERE, reg=None):
         if reg is None:
             import winreg as reg
         cmd = command(root)
-        icon = str(root / "app" / "cleanview.ico")
+        icon = str(icon_file(root / "app"))
         base = r"Software\Classes"
         want = {(PROGID, ""): f"{APP_NAME} video",
                 (PROGID, "FriendlyTypeName"): f"{APP_NAME} video",

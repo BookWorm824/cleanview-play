@@ -18,7 +18,7 @@ touch", then "keeping clean view as a save program only add a play now feature f
   `git fetch original` and `git merge <commit>` (or cherry-pick), then fix what the merge
   touches here. Copy from commits, not from its working copy. Brought in so far: 1.18.90
   (e2d32b6, the start), 1.18.91 (b54b7c7, 2026-11-14; its tests/support.py hiding
-  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her"), 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words), 1.18.98 (12c0363, 2026-11-14, "Al" isn't "hell", two Aladdin lessons for kids), 1.18.99 (2c0abe6, 2026-11-14, the green bar follows real time, loud music turned down to a tenth) 1.18.100 (5d8abb1, 2026-11-14, the chosen files' line bigger and bolder) 1.18.101 (c7207e1, 2026-11-14, "<show> S1 - (1)" names read as season and episode) 1.18.102 (6c53cf1, 2026-11-14, "hell'd" and "step out on your wife" caught), 1.18.103 (6c1137c, 2026-11-14, the kissing buttons say "Cut passionate" and "Cut all kisses"), 1.18.104 (66e0aa8, 2026-11-14, chat cut pictures made in the background, Person of Interest S1E3 misses), 1.18.105 (59d489e, 2026-11-15, "hay" heard as "heck" offered unticked, conquests, Person of Interest S1E4) and 1.18.106 (eaad2f6, 2026-11-15, the taught picture check with picture_taught.json, bare-no second looks unticked, CleanListen 1.17.44 fool/dumb words). Keep changes to shared files
+  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her"), 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words), 1.18.98 (12c0363, 2026-11-14, "Al" isn't "hell", two Aladdin lessons for kids), 1.18.99 (2c0abe6, 2026-11-14, the green bar follows real time, loud music turned down to a tenth) 1.18.100 (5d8abb1, 2026-11-14, the chosen files' line bigger and bolder) 1.18.101 (c7207e1, 2026-11-14, "<show> S1 - (1)" names read as season and episode) 1.18.102 (6c53cf1, 2026-11-14, "hell'd" and "step out on your wife" caught), 1.18.103 (6c1137c, 2026-11-14, the kissing buttons say "Cut passionate" and "Cut all kisses"), 1.18.104 (66e0aa8, 2026-11-14, chat cut pictures made in the background, Person of Interest S1E3 misses), 1.18.105 (59d489e, 2026-11-15, "hay" heard as "heck" offered unticked, conquests, Person of Interest S1E4), 1.18.106 (eaad2f6, 2026-11-15, the taught picture check with picture_taught.json, bare-no second looks unticked, CleanListen 1.17.44 fool/dumb words) and 1.18.107 (beea422, 2026-11-15, the working logo 50% larger and the icon's slight 3D look; Play's launcher looks for "CleanView Play.lnk" (APP_NAME) and "Open with" shows a copy named by its contents, cvopenwith.icon_file). Keep changes to shared files
   small so merges stay easy; Play's own code goes in its own files.
 - Its own program: `%LOCALAPPDATA%\CleanView Play` (APP_DATA in every module), the lock
   `Local\CleanView-Play-open`, `CleanView Play.exe` / `CleanView Play-work.exe`, the
@@ -383,7 +383,26 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
 - The title on the progress page (1.18.22, Jason): the video's name without ".m4v", big and
   bold (`self.which`), instead of small grey text. With one video, CleanView's logo sits in
   the empty space below (1.18.23, Jason: "a lot of dead space"; `logo_png` takes the PNG out
-  of `cleanview.ico`, so no PIL is needed).
+  of `cleanview.ico`, so no PIL is needed). Since 1.18.107 it's 50% larger, 192 pixels
+  (`WORKING_LOGO`; the owner, 2026-11-15: "lets make it 50% larger on screen"), shrunk
+  smoothly from the icon's 256-pixel picture (`logo_image`: `_png_rgba` reads the PNG,
+  `_shrink` averages; Tk alone only drops pixels).
+- The logo has a slight 3D look (1.18.107, 2026-11-15; the owner: "its kinda flat looking. I
+  think it needs to have a slight 3d look. make some mockups", picked "E · All of it", then
+  "fix new logo in app screen and on desktops" and "apply to each chat"). `cleanview.ico` is
+  made by `tools/icon_3d.py` from `tools/cleanview_flat.ico` (keep it; for a coloured tile
+  with a white picture): the tile lighter at the top and darker at the bottom (`TOP`,
+  `BOTTOM`), a faint white top edge (`RIM`), the picture shaded a little at its bottom with a
+  soft shadow under it, every size shrunk from 256. The app's own screens read the .ico, so
+  they follow. Windows keeps a picture of a shortcut's icon by the icon file's name, so
+  `launcher.new_icon_on_shortcuts` (run_app, in a thread), once each time the .ico changes
+  (`ICON_SHOWN`), copies it to `cleanview-<mark>.ico`, points this install's CleanView.lnk
+  shortcuts (desktop, Start menu, pinned; only those whose arguments are this folder's
+  launcher.pyw, `SHORTCUT_PLACES`) at it with PowerShell, and tells Explorer
+  (SHChangeNotify). CleanView.exe and CleanView-work.exe made before get the new icon
+  (`_new_icon_on_exes`, `icon.txt`; changed as a copy that takes the old one's place, so one
+  in use is tried next time). Passed to CleanListen, CleanRead, ReadAloud, Play and
+  CleanStream. Not seen on her desktop yet.
 - "Claude's findings on this video" (the Ask tab, 1.18.23, Jason: it had every movie he'd
   done) writes `Findings for this video.csv` with only the videos on the review page
   (`learn.findings_rows(videos)`/`write_findings`); `claude_findings.csv` still has them
@@ -1865,6 +1884,10 @@ Run from the repo folder with the app's own Python (it has the packages the app 
   free and what to do, and isn't offered for sending; an unexpected failure still is.
 - `test_words_from_cleanlisten_1_17_44.py`: fooling someone, "play dumb" and "shut it softly"
   left alone; "Don't be a fool", "What a fool you are!", "That's dumb", "Shut it!" still muted.
+- `test_logo_3d.py`: the shipped icon is the tool's output from the flat one (same shape,
+  lighter top, the picture still white), CleanView.exe made before gets it once (one in use
+  is tried again), and only this install's shortcuts are pointed at a copy named by its
+  contents, again when it changes.
 - `test_taught_pictures.py`: the shipped checks load (and are in version.json), a run of
   taught hits is a find and a blip isn't, not twice where a description found it, dark frames
   left out, no file changes nothing, a new file redoes the scans, and taught finds count only
