@@ -18,7 +18,7 @@ touch", then "keeping clean view as a save program only add a play now feature f
   `git fetch original` and `git merge <commit>` (or cherry-pick), then fix what the merge
   touches here. Copy from commits, not from its working copy. Brought in so far: 1.18.90
   (e2d32b6, the start), 1.18.91 (b54b7c7, 2026-11-14; its tests/support.py hiding
-  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her"), 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words), 1.18.98 (12c0363, 2026-11-14, "Al" isn't "hell", two Aladdin lessons for kids), 1.18.99 (2c0abe6, 2026-11-14, the green bar follows real time, loud music turned down to a tenth) 1.18.100 (5d8abb1, 2026-11-14, the chosen files' line bigger and bolder) 1.18.101 (c7207e1, 2026-11-14, "<show> S1 - (1)" names read as season and episode) 1.18.102 (6c53cf1, 2026-11-14, "hell'd" and "step out on your wife" caught), 1.18.103 (6c1137c, 2026-11-14, the kissing buttons say "Cut passionate" and "Cut all kisses"), 1.18.104 (66e0aa8, 2026-11-14, chat cut pictures made in the background, Person of Interest S1E3 misses), 1.18.105 (59d489e, 2026-11-15, "hay" heard as "heck" offered unticked, conquests, Person of Interest S1E4), 1.18.106 (eaad2f6, 2026-11-15, the taught picture check with picture_taught.json, bare-no second looks unticked, CleanListen 1.17.44 fool/dumb words), 1.18.107 (beea422, 2026-11-15, the working logo 50% larger and the icon's slight 3D look; Play's launcher looks for "CleanView Play.lnk" (APP_NAME) and "Open with" shows a copy named by its contents, cvopenwith.icon_file), 1.18.108 (a9e0bc5, 2026-11-15, the stronger 3D logo, cleanview_logo.png, the working logo 384 px and fitted to the window; takes Play's APP_NAME shortcut line), 1.18.109 (f6a1cbe, 2026-11-15, a little cleaner sweeps the logo while cleaning, cvsweeper.py), 1.18.110 (63017da, 2026-11-15, the cleaner walks more lifelike and leans on his broom while paused), 1.18.111 (c0b7e1f, 2026-11-16, a push broom cleaner, the taskbar logo with Play's own TASKBAR_ID "BookWorm824.CleanViewPlay", Forest Gump's lessons, coons/faggotty, soda isn't drinking, Dick as a name), 1.18.112 (f27d826, 2026-11-16, unclear taught picture finds dropped, a scene taught for one movie: Forest Gump's principal visit) and 1.18.113 (cd498b9, 2026-11-16, that learned scene gets its number and tick; Play found the KeyError while merging 1.18.112 and held it back). Keep changes to shared files
+  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her"), 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words), 1.18.98 (12c0363, 2026-11-14, "Al" isn't "hell", two Aladdin lessons for kids), 1.18.99 (2c0abe6, 2026-11-14, the green bar follows real time, loud music turned down to a tenth) 1.18.100 (5d8abb1, 2026-11-14, the chosen files' line bigger and bolder) 1.18.101 (c7207e1, 2026-11-14, "<show> S1 - (1)" names read as season and episode) 1.18.102 (6c53cf1, 2026-11-14, "hell'd" and "step out on your wife" caught), 1.18.103 (6c1137c, 2026-11-14, the kissing buttons say "Cut passionate" and "Cut all kisses"), 1.18.104 (66e0aa8, 2026-11-14, chat cut pictures made in the background, Person of Interest S1E3 misses), 1.18.105 (59d489e, 2026-11-15, "hay" heard as "heck" offered unticked, conquests, Person of Interest S1E4), 1.18.106 (eaad2f6, 2026-11-15, the taught picture check with picture_taught.json, bare-no second looks unticked, CleanListen 1.17.44 fool/dumb words), 1.18.107 (beea422, 2026-11-15, the working logo 50% larger and the icon's slight 3D look; Play's launcher looks for "CleanView Play.lnk" (APP_NAME) and "Open with" shows a copy named by its contents, cvopenwith.icon_file), 1.18.108 (a9e0bc5, 2026-11-15, the stronger 3D logo, cleanview_logo.png, the working logo 384 px and fitted to the window; takes Play's APP_NAME shortcut line), 1.18.109 (f6a1cbe, 2026-11-15, a little cleaner sweeps the logo while cleaning, cvsweeper.py), 1.18.110 (63017da, 2026-11-15, the cleaner walks more lifelike and leans on his broom while paused), 1.18.111 (c0b7e1f, 2026-11-16, a push broom cleaner, the taskbar logo with Play's own TASKBAR_ID "BookWorm824.CleanViewPlay", Forest Gump's lessons, coons/faggotty, soda isn't drinking, Dick as a name), 1.18.112 (f27d826, 2026-11-16, unclear taught picture finds dropped, a scene taught for one movie: Forest Gump's principal visit), 1.18.113 (cd498b9, 2026-11-16, that learned scene gets its number and tick; Play found the KeyError while merging 1.18.112 and held it back) and 1.18.114 (496c56f, 2026-11-16, Black Beauty words, four more Forest Gump scenes, updates install by themselves when idle, bigger text; Play's _safe_to_update also waits while a video is open, even minimized). Keep changes to shared files
   small so merges stay easy; Play's own code goes in its own files.
 - Its own program: `%LOCALAPPDATA%\CleanView Play` (APP_DATA in every module), the lock
   `Local\CleanView-Play-open`, `CleanView Play.exe` / `CleanView Play-work.exe`, the
@@ -522,6 +522,61 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   CleanView Play chat while merging it). It now gets the next number, `cut`, the video's end
   and `said` like the others; `test_forest_gump.ThroughAWholeScan` runs a whole `analyze()`
   with stand-ins on a "Forest Gump.mp4" (it fails on 1.18.112 with KeyError 'id').
+- Words from her Black Beauty report (1.18.114, 2026-11-16; CleanRead, in the CleanListen chat,
+  passed on for every app: "leave all words except pussy. take that word out", "i guess if jerk
+  is used directed towards a person it should come out", "but if its a motion should stay. like
+  he jerked the rope", "and dumb if its aninsult"). The same as CleanListen's (its branch
+  lessons-bb, a77c7fc): "pussy" is always muted (its "pussy cat"/"pussy willow" guard is gone);
+  "jerk" only at a person: `jerk_motion()` (`JERK_MOTION_NEXT`, `JERK_PERSON_NEXT`, `JERK_GIVE`,
+  `JERK_CALLED_BEFORE`) and motion words in `INNOCENT_PREV` ("a jerk of his head", "with a sudden
+  jerk", "gave the rein a jerk" left alone; "you jerk", "a jerk of a husband", "don't be a jerk
+  at the party" muted); "dumb" only as an insult: unable-to-speak nouns in `INNOCENT_NEXT`
+  (beasts, creature, amazement, patience...) and `INNOCENT_PREV` (struck, stood, fell, became...),
+  `dumb_called()` ("you dumb animal" still muted). None of the 39 lines with these words in the
+  past reviews here reads differently. `test_cleanlisten_words.WAITING_ON_CLEANLISTEN` has the
+  three pussy-cat lines until CleanListen releases it.
+- A second Forest Gump report (1.18.114, 2026-11-16; another PC, 16 threads, 64 GB, the models
+  23-36% on its card; Young kids, made on 1.18.113, 107 min). 1.18.111-1.18.113 worked there: the
+  principal's visit cut, the 11 taught lines muted, "Dick" (Cavett) and "Dang" left alone,
+  "coons" and "faggotty" found. Its reviewer unticked nearly every rude word, "dear God", the
+  slurs and two "immodest clothing" scenes: that family's choices, not taught. The picture checks
+  missed what they missed on her laptop, so four more scenes taught for the film (her picks
+  "Strip club", "Dorm room", "Bare bottom", "New Year's bed"): the Memphis strip club (from
+  "I took the bus up to Memphis..." to "Forrest, let me down!", Nudity, for nudity/implied/sex/
+  sexref, every age as she asked of strip clubs), Jenny's dorm room ("...just one-to-one." to
+  "I don't care. I don't like her, anyway.", Sex scene, sex/sexref/nudity/implied), Forrest's bare
+  bottom ("I'd kind of like to see that." to "God damn, son.", Nudity, nudity/implied) and
+  New Year's bed ("Happy New Year, Lieutenant Dan!" to "You retard. Loser. You freak.", Sex
+  scene, sex/sexref). `_line_at` now takes the whole line, or one with it inside, before a piece
+  of it ("Happy New Year!" 23 s before "Happy New Year, Lieutenant Dan!").
+- Updates install by themselves when it's safe (1.18.114, 2026-11-16; the owner: "should we have
+  it auto update instead of relying on some to hit check for updates and then hit update. they
+  might miss it", then "lets try that. we can alway go back"). Opening CleanView already updated
+  it before the window (launcher `run_app`); a window left open only showed the bar. Now an
+  update found by the 30-minute check (`update_ready`) also calls `_auto_update`: it runs
+  `update_now` (which saves the settings and a review, downloads and restarts, as the button
+  does) when `_safe_to_update`: the start page with no videos chosen, or the done page, no box
+  open, and the window untouched for `AUTO_UPDATE_IDLE` (60 s; `_touched` on any key, click,
+  wheel or mouse move). Otherwise it tries again every `AUTO_UPDATE_RETRY` (60 s), so after a
+  clean is reviewed and saved it updates on the done page. Never while cleaning, saving or
+  reviewing. The bar says "It updates by itself when CleanView isn't busy."; "Update now" stays.
+  A failed download clears `_auto_updating`, so the next check tries again. To go back: drop
+  the `_auto_update` call in `_handle`'s `update_ready`.
+- Every text size one step bigger (1.18.114, 2026-11-16; the owner: "where you select the text
+  size", "lets make each starting size one size bigger"): `TEXT_SIZES` Normal 1.15, Larger 1.3,
+  Largest 1.45 (was 1.0, 1.15, 1.3). Saved choices keep their name, so everyone's text grows one
+  step; the window grows with it (`_fit_window` goes by `tk scaling`), never past the screen.
+  Tk keeps one `tk scaling` for every window of a process, so the PC's own scale is read once,
+  as the first window opens (module `_base_scaling`): a second window took the first one's text
+  size as its own and grew it again (1.33 -> 1.53 -> 1.76...), which made the full test run's
+  later windows huge (buttons 3,414 px wide) until it crashed; with "Normal" at 1.0 nothing had
+  shown it.
+- The ages choice is easier to see (1.18.114, 2026-11-16; the owner: "on the menu that says
+  'yound kids' kids' adults'. can those be mad not as gray as they are? easier to see. maybe a
+  shade whiter and one size bigger"): step 2's `look.Segmented` for `PROFILES` is 11 pt (was 10),
+  its tray `AGE_TRAY` (a shade whiter than `SIDE`) and the ages not chosen `AGE_TEXT` (darker
+  than `MUTED`) with a thin `LINE` edge so it still shows on the page; `Segmented(dim=, edge=)`
+  are new in cvlook.py (CleanListen's copy may follow).
 - "Claude's findings on this video" (the Ask tab, 1.18.23, Jason: it had every movie he'd
   done) writes `Findings for this video.csv` with only the videos on the review page
   (`learn.findings_rows(videos)`/`write_findings`); `claude_findings.csv` still has them
@@ -2015,10 +2070,17 @@ Run from the repo folder with the app's own Python (it has the packages the app 
   Pause (`engine.PAUSE`) stops him leaning on his broom until Resume; the push broom is in
   front, pushed out and back with the dust ahead of it, stood up when paused, his hands in
   reach, and the detail (shirt, brass, eye white, hair, outline) is drawn.
+- `test_auto_update.py`: an update found installs by itself on an idle start page or the done
+  page, not with videos chosen, while cleaning or reviewing, with a box open or the window just
+  used; it waits and goes ahead once it's safe; only one wait at a time.
+- `test_black_beauty_words.py`: "pussy" always, "jerk" at a person but not a movement, "dumb"
+  as an insult but not unable to speak.
 - `test_forest_gump.py`: the slur "coons" and "faggotty" (not raccoons or the cat), the strip
   club phrases for every age, soda isn't drinking, "Dick" as a name written so (not "such a
   Dick"), the nine Kids lessons, the club's lines for every age, the notes, and the
   principal's visit cut by its lines in any copy, only with sex or sexref ticked.
+- `test_text_scale.py`: every text size one step bigger, and each window of a process starts
+  from the PC's own scale (not the last window's).
 - `test_taskbar_logo.py`: the window has its own taskbar name (set before the window is
   made) and carries the green logo, big and small.
 - `test_taught_pictures.py`: the shipped checks load (and are in version.json), a run of

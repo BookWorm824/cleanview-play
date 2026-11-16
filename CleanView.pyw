@@ -49,6 +49,10 @@ LIGHT = dict(
     SAY_REMOVE="#8E2B2B", SAY_FINE="#2E7D4F", SAY_WORD="#A0663A",
     PLAYER_BG="#000000", PLAYER_BAR="#1E1F21", PLAYER_BTN="#36383C", PLAYER_BTN_HOVER="#46494E",
     PLAYER_INK="#F2EFEA", PLAYER_DIM="#B3AEA6",     # the player (the same in both looks)
+    # the ages choice (1.18.114; the owner, 2026-11-16: "can those be mad not as gray as they
+    # are? easier to see. maybe a shade whiter and one size bigger"): its tray, and the ages
+    # not chosen (MUTED and SIDE before)
+    AGE_TRAY="#FAF8F5", AGE_TEXT="#45413C",
     PIECES=dict(off="#D8D1C6", some="#8FB5AC", tick_off="#FFFFFF", tick_edge="#9C958B",
                 dim_fill="#F1EEEA", dim_edge="#CFC9C1", dim_on="#A9C2BC", bar="#D3CBC0",
                 bar_hover="#B7AEA2"))
@@ -64,6 +68,7 @@ DARK = dict(
     SAY_REMOVE="#F0907E", SAY_FINE="#72C691", SAY_WORD="#E3A784",
     PLAYER_BG="#000000", PLAYER_BAR="#1E1F21", PLAYER_BTN="#36383C", PLAYER_BTN_HOVER="#46494E",
     PLAYER_INK="#F2EFEA", PLAYER_DIM="#B3AEA6",     # the player (the same in both looks)
+    AGE_TRAY="#2B2D31", AGE_TEXT="#D6D2CB",
     PIECES=dict(off="#4C4F54", some="#35675C", tick_off="#27292C", tick_edge="#7A7E85",
                 dim_fill="#2B2D31", dim_edge="#4C4F54", dim_on="#33504A", bar="#4C4F54",
                 bar_hover="#63676E"))
@@ -160,8 +165,14 @@ def chip_color(label):
     return CHIP.get(label.split(" ")[0], "#2F6F62")
 
 
-TEXT_SIZES = {"Normal": 1.0, "Larger": 1.15, "Largest": 1.3}
+# each one step bigger since 1.18.114 (the owner, 2026-11-16: "where you select the text size",
+# "lets make each starting size one size bigger"; it was 1.0, 1.15, 1.3)
+TEXT_SIZES = {"Normal": 1.15, "Larger": 1.3, "Largest": 1.45}
 _text_scale = 1.0          # the chosen one, set as the window opens
+# the PC's own scale, read as the first window opens: Tk keeps one scale for every window of the
+# process, so a second window read the first one's text size as its own and grew it again
+# (1.15, then 1.32, 1.52... once "Normal" became 1.15 in 1.18.114; the tests open dozens)
+_base_scaling = None
 
 
 def chime():
@@ -477,6 +488,8 @@ NO_INTERNET_ASK = ("There's no internet connection, so CleanView can't look for 
                    "online.\n\nVideos that have their own subtitles will still use them.\n\n"
                    "Clean without looking online?")
 UPDATED_SHOWN_SECS = 3      # how long "CleanView Play was updated to version ..." stays up
+AUTO_UPDATE_IDLE = 60       # an update found installs by itself once the window hasn't been
+AUTO_UPDATE_RETRY = 60      # touched this long (seconds) and it's safe; else tried again then
 ICON_AGAIN = (0.5, 3.0)       # seconds after the window is made that its logo is set again
 TASKBAR_ID = "BookWorm824.CleanViewPlay"   # Play's own name to the taskbar, not CleanView's
 
@@ -919,7 +932,10 @@ class App(tk.Tk):
         self.title("CleanView Play")
         # bigger text if she chose it: Tk sizes text as each part of the window is built,
         # so this comes first (and changing it builds the page again, see _set_text_size)
-        self._base_scaling = float(self.tk.call("tk", "scaling"))
+        global _base_scaling
+        if _base_scaling is None:
+            _base_scaling = float(self.tk.call("tk", "scaling"))
+        self._base_scaling = _base_scaling
         self.text_size = self._load_settings().get("text_size")
         if self.text_size not in TEXT_SIZES:
             self.text_size = "Normal"
@@ -954,6 +970,9 @@ class App(tk.Tk):
         threading.Thread(target=lambda: cvplay.index_views(APP_DATA / "views"), daemon=True,
                          name="list cleaned").start()
         self.after(4000, self._check_update)
+        self._last_touch = time.monotonic()      # for updating by itself (_safe_to_update)
+        for ev in ("<Key>", "<Button>", "<MouseWheel>", "<Motion>"):
+            self.bind_all(ev, self._touched, add="+")
         self.bind_all("<F5>", lambda e: self._check_update(manual=True))
 
     def _fit_window(self, grow_only=False):
@@ -1004,13 +1023,51 @@ class App(tk.Tk):
         if not manual:
             self.after(30 * 60 * 1000, self._check_update)
 
+    def _touched(self, _e=None):
+        self._last_touch = time.monotonic()
+
+    def _safe_to_update(self):
+        """Updating restarts CleanView, so it does so by itself only where nothing is lost: on
+        the start page with no videos chosen, or the done page, no box open, and the window
+        not touched for AUTO_UPDATE_IDLE seconds. Never while cleaning, saving or reviewing."""
+        if self.page_name not in ("setup", "done") or \
+                (self.page_name == "setup" and self.videos):
+            return False
+        if getattr(self, "watching", None) is not None:
+            return False                # CleanView Play: a video is open, even minimized
+        try:
+            if self.grab_current() is not None or any(
+                    isinstance(w, tk.Toplevel) and w.winfo_viewable()
+                    for w in self.winfo_children()):
+                return False
+        except tk.TclError:
+            return False
+        return time.monotonic() - getattr(self, "_last_touch", 0.0) >= AUTO_UPDATE_IDLE
+
+    def _auto_update(self, ver):
+        """An update was found: install it by itself as soon as it's safe (1.18.114; the owner,
+        2026-11-16: "should we have it auto update instead of relying on some to hit check for
+        updates and then hit update. they might miss it", then "lets try that. we can alway go
+        back"). Opening CleanView already updated it first; this is for one left open."""
+        if getattr(self, "_auto_updating", False):
+            return
+        self._auto_wait_id = None
+        if self._safe_to_update():
+            self._auto_updating = True
+            self.update_now()
+        else:
+            self._auto_wait_id = self.after(int(AUTO_UPDATE_RETRY * 1000),
+                                            lambda: self._auto_update(ver))
+
     def _show_update_bar(self, ver):
+        said = (f"A new version of CleanView ({ver}) is ready. It updates by itself when "
+                "CleanView isn't busy.") if ver else "A new version of CleanView is ready."
         if self.upd_bar is not None and self.upd_bar.winfo_exists():
-            self.upd_lbl.config(text=f"A new version of CleanView ({ver}) is ready.")
+            self.upd_lbl.config(text=said)
             return
         bar = tk.Frame(self, bg=TINT)
         bar.pack(side="top", fill="x", before=self.page)
-        self.upd_lbl = tk.Label(bar, text=f"A new version of CleanView ({ver}) is ready.",
+        self.upd_lbl = tk.Label(bar, text=said,
                                 bg=TINT, fg=ACCENT_DK, font=(FONT, 10), padx=12, pady=6)
         self.upd_lbl.pack(side="left")
         self.upd_btn = ttk.Button(bar, text="Update now (keeps your place)", style="Small.TButton",
@@ -1142,6 +1199,7 @@ class App(tk.Tk):
 
     def _update_done(self, new, err):
         if err:
+            self._auto_updating = False     # tried again at the next check
             self.upd_lbl.config(text="The update didn't download. Try again in a bit.")
             self.upd_btn.config(state="normal")
             return
@@ -1691,8 +1749,8 @@ class App(tk.Tk):
         prow = tk.Frame(p2, bg=BG)
         prow.pack(fill="x", padx=(0, X(4)))
         self.profile_var = tk.StringVar(value=self.profile)
-        look.Segmented(prow, PROFILES, self.profile_var, command=self._profile_changed).pack(
-            side="left")
+        look.Segmented(prow, PROFILES, self.profile_var, command=self._profile_changed,
+                       size=11, tray=AGE_TRAY, dim=AGE_TEXT, edge=LINE).pack(side="left")
         look.link(prow, "Reset to standard", self._profile_reset, size=9).pack(side="right")
         tk.Label(p2, text="Each age remembers its own choices, and what CleanView learns from "
                  "them is kept separately for each.", bg=BG, fg=MUTED, font=(FONT, 9),
@@ -3114,6 +3172,8 @@ class App(tk.Tk):
             self._reviewed(*msg[1:])
         elif kind == "update_ready":
             self._show_update_bar(msg[1])
+            if getattr(self, "_auto_wait_id", None) is None:   # not already waiting
+                self._auto_update(msg[1])
         elif kind == "update_none":
             messagebox.showinfo("CleanView Play", f"You have the newest version ({msg[1]})."
                                 if msg[1] else "Couldn't check for updates right now. "
