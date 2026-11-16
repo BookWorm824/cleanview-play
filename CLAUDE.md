@@ -18,7 +18,7 @@ touch", then "keeping clean view as a save program only add a play now feature f
   `git fetch original` and `git merge <commit>` (or cherry-pick), then fix what the merge
   touches here. Copy from commits, not from its working copy. Brought in so far: 1.18.90
   (e2d32b6, the start), 1.18.91 (b54b7c7, 2026-11-14; its tests/support.py hiding
-  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her"), 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words), 1.18.98 (12c0363, 2026-11-14, "Al" isn't "hell", two Aladdin lessons for kids), 1.18.99 (2c0abe6, 2026-11-14, the green bar follows real time, loud music turned down to a tenth) 1.18.100 (5d8abb1, 2026-11-14, the chosen files' line bigger and bolder) 1.18.101 (c7207e1, 2026-11-14, "<show> S1 - (1)" names read as season and episode) 1.18.102 (6c53cf1, 2026-11-14, "hell'd" and "step out on your wife" caught), 1.18.103 (6c1137c, 2026-11-14, the kissing buttons say "Cut passionate" and "Cut all kisses"), 1.18.104 (66e0aa8, 2026-11-14, chat cut pictures made in the background, Person of Interest S1E3 misses), 1.18.105 (59d489e, 2026-11-15, "hay" heard as "heck" offered unticked, conquests, Person of Interest S1E4), 1.18.106 (eaad2f6, 2026-11-15, the taught picture check with picture_taught.json, bare-no second looks unticked, CleanListen 1.17.44 fool/dumb words), 1.18.107 (beea422, 2026-11-15, the working logo 50% larger and the icon's slight 3D look; Play's launcher looks for "CleanView Play.lnk" (APP_NAME) and "Open with" shows a copy named by its contents, cvopenwith.icon_file), 1.18.108 (a9e0bc5, 2026-11-15, the stronger 3D logo, cleanview_logo.png, the working logo 384 px and fitted to the window; takes Play's APP_NAME shortcut line), 1.18.109 (f6a1cbe, 2026-11-15, a little cleaner sweeps the logo while cleaning, cvsweeper.py), 1.18.110 (63017da, 2026-11-15, the cleaner walks more lifelike and leans on his broom while paused) and 1.18.111 (c0b7e1f, 2026-11-16, a push broom cleaner, the taskbar logo with Play's own TASKBAR_ID "BookWorm824.CleanViewPlay", Forest Gump's lessons, coons/faggotty, soda isn't drinking, Dick as a name). Keep changes to shared files
+  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her"), 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words), 1.18.98 (12c0363, 2026-11-14, "Al" isn't "hell", two Aladdin lessons for kids), 1.18.99 (2c0abe6, 2026-11-14, the green bar follows real time, loud music turned down to a tenth) 1.18.100 (5d8abb1, 2026-11-14, the chosen files' line bigger and bolder) 1.18.101 (c7207e1, 2026-11-14, "<show> S1 - (1)" names read as season and episode) 1.18.102 (6c53cf1, 2026-11-14, "hell'd" and "step out on your wife" caught), 1.18.103 (6c1137c, 2026-11-14, the kissing buttons say "Cut passionate" and "Cut all kisses"), 1.18.104 (66e0aa8, 2026-11-14, chat cut pictures made in the background, Person of Interest S1E3 misses), 1.18.105 (59d489e, 2026-11-15, "hay" heard as "heck" offered unticked, conquests, Person of Interest S1E4), 1.18.106 (eaad2f6, 2026-11-15, the taught picture check with picture_taught.json, bare-no second looks unticked, CleanListen 1.17.44 fool/dumb words), 1.18.107 (beea422, 2026-11-15, the working logo 50% larger and the icon's slight 3D look; Play's launcher looks for "CleanView Play.lnk" (APP_NAME) and "Open with" shows a copy named by its contents, cvopenwith.icon_file), 1.18.108 (a9e0bc5, 2026-11-15, the stronger 3D logo, cleanview_logo.png, the working logo 384 px and fitted to the window; takes Play's APP_NAME shortcut line), 1.18.109 (f6a1cbe, 2026-11-15, a little cleaner sweeps the logo while cleaning, cvsweeper.py), 1.18.110 (63017da, 2026-11-15, the cleaner walks more lifelike and leans on his broom while paused), 1.18.111 (c0b7e1f, 2026-11-16, a push broom cleaner, the taskbar logo with Play's own TASKBAR_ID "BookWorm824.CleanViewPlay", Forest Gump's lessons, coons/faggotty, soda isn't drinking, Dick as a name), 1.18.112 (f27d826, 2026-11-16, unclear taught picture finds dropped, a scene taught for one movie: Forest Gump's principal visit) and 1.18.113 (cd498b9, 2026-11-16, that learned scene gets its number and tick; Play found the KeyError while merging 1.18.112 and held it back). Keep changes to shared files
   small so merges stay easy; Play's own code goes in its own files.
 - Its own program: `%LOCALAPPDATA%\CleanView Play` (APP_DATA in every module), the lock
   `Local\CleanView-Play-open`, `CleanView Play.exe` / `CleanView Play-work.exe`, the
@@ -494,6 +494,34 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   closer look at 67 scenes, 27 of them "graphic violence (hard to see)" left unticked, none real
   that can be told from the dialogue (the feather among them); the picture misses above (weak
   spot 2). For CleanListen and CleanRead: the two words and the strip club phrases.
+- The taught check's finds the AI helper can't make out are dropped (1.18.112, 2026-11-16; the
+  owner: "i noticed a lot of ticks sai graphoc violance but werent. why is it doing that", then
+  "Drop the taught ones"). Forest Gump had 27 "graphic violence (hard to see, so only cut if you
+  tick it)" scenes, none real that the dialogue shows (the feather among them). The taught
+  check's finds were meant to count only when the AI helper agrees (1.18.106), but
+  `decide_picture_scenes` let an "unclear" verdict through (offered unticked); now it's
+  dropped like a no. Finds of the picture AI's own descriptions that it can't make out are
+  still offered unticked. The closer look itself still looks at every find (the time it took,
+  103 of 204 minutes on her laptop, is unchanged).
+- A scene can be taught for one movie (1.18.112, 2026-11-16; the owner, of Forest Gump: "there
+  is a scene where a teacher visits his house and you hear sounds, then he walks past forest and
+  says 'your mama sure loves you' that needs cut if sexual is ticked. his mom did something for
+  the teacher to get forest accepted", "its only gets cut it its ticked"). A notes can only make
+  the AIs look harder; this cuts. `shared_learned.json` shows[...]["scenes"] (carried by
+  `merge_learned.py`): {"title": name(s), "after": a line, "until": a line, "kind", "for": the
+  filters any one of which cuts it, "why"}. `learn.title_scenes(key, title, dialogue, ticked)`
+  places it from the end of the "after" line to the end of the "until" line (`_line_at`: the
+  same line, one with it inside, or most of it), so it fits any copy whatever its timing, and
+  only when one of its filters is ticked; `analyze` adds it after `learn.apply`, ticked
+  (`sure`) and marked `learned` so no AI review unticks it. The first: Forest/Forrest Gump, the
+  principal's night visit, "He's on vacation." to "You don't say much, do you?" (8:57-9:27 in
+  her copy), "Sex scene", for sex or sexref, every age.
+  1.18.113: 1.18.112 added it after `analyze` numbers the scenes (`sc["id"]`, `sc["cut"]`), so
+  it had no number and no tick, and `make_thumbs` at the end (`f"{sc['id']}_..."`) would have
+  failed the whole scan of that movie with sexual references or sex scenes ticked (found by the
+  CleanView Play chat while merging it). It now gets the next number, `cut`, the video's end
+  and `said` like the others; `test_forest_gump.ThroughAWholeScan` runs a whole `analyze()`
+  with stand-ins on a "Forest Gump.mp4" (it fails on 1.18.112 with KeyError 'id').
 - "Claude's findings on this video" (the Ask tab, 1.18.23, Jason: it had every movie he'd
   done) writes `Findings for this video.csv` with only the videos on the review page
   (`learn.findings_rows(videos)`/`write_findings`); `claude_findings.csv` still has them
@@ -1989,7 +2017,8 @@ Run from the repo folder with the app's own Python (it has the packages the app 
   reach, and the detail (shirt, brass, eye white, hair, outline) is drawn.
 - `test_forest_gump.py`: the slur "coons" and "faggotty" (not raccoons or the cat), the strip
   club phrases for every age, soda isn't drinking, "Dick" as a name written so (not "such a
-  Dick"), the nine Kids lessons, the club's lines for every age, and the notes.
+  Dick"), the nine Kids lessons, the club's lines for every age, the notes, and the
+  principal's visit cut by its lines in any copy, only with sex or sexref ticked.
 - `test_taskbar_logo.py`: the window has its own taskbar name (set before the window is
   made) and carries the green logo, big and small.
 - `test_taught_pictures.py`: the shipped checks load (and are in version.json), a run of

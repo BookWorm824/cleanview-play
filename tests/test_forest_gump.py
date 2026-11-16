@@ -6,8 +6,11 @@ import json
 import os
 import tempfile
 import unittest
+from pathlib import Path
+from unittest import mock
 
 import support  # noqa: F401  (must come first)
+import test_timing as T
 
 import cleanview as engine
 import cleanview_ai as ai
@@ -120,6 +123,116 @@ class Lessons(unittest.TestCase):
                                 for n in learn.notes("_movies@adults", title=title)), title)
         self.assertFalse(any("Jenny's dorm room" in n
                              for n in learn.notes("_movies@adults", title="Cars")))
+
+
+class ThePrincipalsVisit(unittest.TestCase):
+    """1.18.112, the owner: "there is a scene where a teacher visits his house and you hear
+    sounds, then he walks past forest and says 'your mama sure loves you' that needs cut if
+    sexual is ticked", "its only gets cut it its ticked"."""
+    LINES = [(520.0, "We're talking about five little points here."),
+             (535.0, "He's on vacation."),
+             (554.5, "Well, your mama sure does care about your schooling, son."),
+             (564.0, "You don't say much, do you?"),
+             (578.0, "\"Finally, he had to try.")]
+
+    def dialogue(self, shift=0.0):
+        return [{"s": s + shift, "e": s + shift + 2.0, "text": t} for s, t in self.LINES]
+
+    def test_cut_from_his_mama_on_vacation_to_you_dont_say_much(self):
+        for ticked in ({"sexref"}, {"sex"}, {"sex", "sexref", "crude"}):
+            got = learn.title_scenes("_movies@kids", "Forest Gump", self.dialogue(), ticked)
+            self.assertEqual([(s["s"], s["e"], s["kind"]) for s in got],
+                             [(537.0, 566.5, ["Sex scene"])], ticked)
+            self.assertTrue(got[0]["sure"] and got[0]["learned"])     # ticked; no AI undoes it
+            self.assertIn("principal", got[0]["why"])                 # shown on the card and
+            self.assertIn("CleanView learned this scene", got[0]["why"])   # in the report
+
+    def test_any_copy_any_age_either_spelling(self):
+        for key in ("_movies", "_movies@teens", "_movies@young"):
+            got = learn.title_scenes(key, "Forrest Gump", self.dialogue(shift=12.0), {"sex"})
+            self.assertEqual([(s["s"], s["e"]) for s in got], [(549.0, 578.5)], key)
+
+    def test_only_when_ticked_and_only_this_movie(self):
+        self.assertEqual(learn.title_scenes("_movies@kids", "Forest Gump", self.dialogue(),
+                                            {"crude", "bullying"}), [])
+        self.assertEqual(learn.title_scenes("_movies@kids", "Cars", self.dialogue(),
+                                            {"sex", "sexref"}), [])
+        self.assertEqual(learn.title_scenes("_movies@kids", "Forest Gump", self.dialogue()[:2],
+                                            {"sexref"}), [])           # its lines not there
+
+
+@T.needs_ffmpeg
+class ThroughAWholeScan(unittest.TestCase):
+    """1.18.112 added the taught scene after the scenes were numbered: no "id", no "cut", and
+    the stills made at the end of analyze() would have failed the scan (found by the CleanView
+    Play chat while merging it). A whole analyze() with stand-ins for the slow parts."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.video = support.SANDBOX / "Forest Gump.mp4"
+        if not cls.video.exists():
+            T.ffmpeg("-f", "lavfi", "-i", "testsrc=size=64x48:rate=10:duration=20", "-f",
+                     "lavfi", "-i", "sine=frequency=300:duration=20", "-c:v", "libx264",
+                     "-c:a", "aac", "-shortest", cls.video)
+
+    def scan(self, opts):
+        work = Path(tempfile.mkdtemp(dir=support.SANDBOX))
+        lines = [{"s": 1.0, "e": 2.5, "text": "We're talking about five little points here."},
+                 {"s": 3.0, "e": 4.0, "text": "He's on vacation."},
+                 {"s": 9.0, "e": 11.0, "text": "Well, your mama sure does care about your schooling, son."},
+                 {"s": 12.0, "e": 13.0, "text": "You don't say much, do you?"},
+                 {"s": 16.0, "e": 17.5, "text": "Finally, he had to try."}]
+        asr = [{"t": w, "s": 3.0 + 0.3 * k, "e": 3.2 + 0.3 * k}
+               for k, w in enumerate("he's on vacation".split())]
+        n = int(20 * engine.VISUAL_FPS)
+        vis = {"version": engine.PICTURE_VERSION, "fps": engine.VISUAL_FPS,
+               "classes": list(engine.KEEP), "scores": [[0.0] * len(engine.KEEP)] * n,
+               "lum": [[120.0, 40.0]] * n, "lifted": [], "notes": []}
+        stills = []
+
+        def make_thumbs(path, scenes, work, *a, **k):     # as the real one names its stills
+            stills.extend(f"{sc['id']}_{i}.png" for sc in scenes for i in range(3))
+        found = [{"s": 0.5, "e": 2.0, "kind": ["Nudity"], "why": "a stand-in find"}]
+        with mock.patch.object(ai, "start_ollama", lambda *a, **k: True), \
+                mock.patch.object(ai, "choose_models", lambda: True), \
+                mock.patch.object(ai, "clip_ready", lambda: False), \
+                mock.patch.object(ai, "on_graphics_card", lambda model=None: True), \
+                mock.patch.object(ai, "free_memory", lambda: None), \
+                mock.patch.object(ai, "dialogue_lines", lambda *a, **k: [dict(l) for l in lines]), \
+                mock.patch.object(ai, "romance_scenes", lambda *a, **k: []), \
+                mock.patch.object(engine, "available_memory_gb", lambda: 16.0), \
+                mock.patch.object(engine, "load_listeners", lambda *a: [None]), \
+                mock.patch.object(engine, "transcribe", lambda *a, **k: asr), \
+                mock.patch.object(engine, "fetch_subtitles",
+                                  lambda *a, **k: ([], "", None, "none online")), \
+                mock.patch.object(engine, "visual_scan", lambda *a, **k: vis), \
+                mock.patch.object(engine, "find_voices", lambda *a, **k: [{"g": "m", "spk": 1}
+                                                                           for _ in lines]), \
+                mock.patch.object(engine, "find_lines", lambda *a, **k: ([], "the AI helper")), \
+                mock.patch.object(engine, "decide_picture_scenes",
+                                  lambda *a, **k: [dict(f) for f in found]), \
+                mock.patch.object(engine, "make_thumbs", make_thumbs):
+            engine.analyze(str(self.video), str(work), groups=["swearing"], opts=opts,
+                           progress=lambda f, m: None, log=lambda m: None)
+        return json.loads((work / "analysis.json").read_text()), stills
+
+    def test_numbered_ticked_and_stills_made(self):
+        st, stills = self.scan({"nudity": True, "sexref": True, "sex": False, "violence": False,
+                                "loudmusic": False, "ai": True, "reader": "local",
+                                "autosubs": True, "look": True})
+        learned = [sc for sc in st["scenes"] if sc.get("learned")]
+        self.assertEqual([(sc["s"], sc["e"], sc["cut"]) for sc in learned], [(4.0, 13.5, True)])
+        ids = [sc["id"] for sc in st["scenes"]]
+        self.assertEqual(len(ids), len(set(ids)))                     # each its own number
+        self.assertEqual(len(st["scenes"]), 2)                         # with the stand-in find
+        self.assertIn(f"{learned[0]['id']}_0.png", stills)
+        self.assertIn("CleanView learned this scene", learned[0]["why"])
+
+    def test_not_there_unticked(self):
+        st, _ = self.scan({"nudity": True, "sexref": False, "sex": False, "violence": False,
+                           "loudmusic": False, "ai": True, "reader": "local", "autosubs": True,
+                           "look": True})
+        self.assertEqual([sc for sc in st["scenes"] if sc.get("learned")], [])
 
 
 if __name__ == "__main__":
