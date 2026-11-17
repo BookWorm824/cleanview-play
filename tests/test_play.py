@@ -1236,15 +1236,21 @@ class OpeningBox(unittest.TestCase):
         seen = self.boxed({"CLEANVIEW_UPDATED": ""})
         self.assertEqual(seen["title"], ["Opening CleanView Play"])
         self.assertEqual(seen["top"], [True])
-        self.assertEqual(seen["said"], ["This can take a few seconds."])
+        # since 1.18.128 the box's title and its "Please wait" line are text too
+        self.assertIn("This can take a few seconds.", seen["said"])
+        self.assertIn("Opening CleanView Play…", seen["said"])
 
     def test_says_it_was_just_updated(self):
         seen = self.boxed({"CLEANVIEW_UPDATED": "CleanView Play was updated to version 9.9.9."})
-        self.assertEqual(seen["said"], ["Updated to version 9.9.9."])
+        self.assertIn("Updated to version 9.9.9.", seen["said"])
+        self.assertNotIn("This can take a few seconds.", seen["said"])
 
     def test_says_its_updating_while_it_downloads(self):
+        # 1.18.128: "Updating CleanView Play to 1.0.40... (5 of 23)"
+        lm = self.load()
+        self.assertEqual(lm.APP_NAME, "CleanView Play")
         src = (support.ROOT / "launcher.pyw").read_text(encoding="utf8")
-        self.assertIn("opening(f\"Updating to version {remote['version']}\\u2026\")", src)
+        self.assertIn('opening(f"{UPDATING} {APP_NAME} to {ver}\\u2026 (0 of {len(names)})")', src)
 
 
 class FakeReg:
