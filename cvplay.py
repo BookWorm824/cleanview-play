@@ -106,7 +106,8 @@ def subtitles(st, mute_rs, cut_rs, line_rs):
     cues = st.get("cues") or []
     if not cues:
         return []
-    cats = [c for g in st.get("groups", []) for c in engine.cl.GROUPS[g]]
+    # as render() picks them (1.18.150: slurs, and sexual and crude words with their filters)
+    cats = engine.cl.cats_for(st.get("groups", []), engine.full_opts(st.get("opts")))
     out = []
     for c in engine.clean_cues(cues, cats, mute_rs, [], line_rs, engine.my_words(st.get("opts"))):
         s, e = c["s"], c["e"]

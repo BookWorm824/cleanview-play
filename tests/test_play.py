@@ -115,6 +115,15 @@ class Subtitles(unittest.TestCase):
             {"s": 45.0, "e": 46.0, "text": "Nice day."}])                 # not moved up
         # the muted line (23-25) and the one inside the cut (30-38) are left out
 
+    def test_blanks_the_words_a_saved_copy_does(self):
+        # 1.18.150: sexual words with "Sexual references", crude ones with "Crude humor"
+        cues = [{"s": 50.0, "e": 52.0, "text": "What a slut"},
+                {"s": 53.0, "e": 55.0, "text": "Nice turd"}]
+        on = cvplay.entry(st_with(cues=cues, opts={"sexref": True, "crude": True}))["cues"]
+        self.assertEqual([c["text"] for c in on], ["What a —", "Nice —"])
+        off = cvplay.entry(st_with(cues=cues, opts={"sexref": False, "crude": False}))["cues"]
+        self.assertEqual([c["text"] for c in off], ["What a slut", "Nice turd"])
+
     def test_no_subtitles_none_offered(self):
         self.assertEqual(cvplay.entry(st_with(cues=[]))["cues"], [])
 
