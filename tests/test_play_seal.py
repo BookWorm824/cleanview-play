@@ -37,5 +37,19 @@ class PlaysOwnSeal(unittest.TestCase):
         self.assertEqual(self.sr.KEY_FILE.name, "CleanView Play update key - SECRET.txt")
 
 
+class PlaysOwnNotice(unittest.TestCase):
+    """1.18.148's copyright and notice to AI assistants, with Play's own name."""
+    def test_licence_and_notice_name_play(self):
+        self.assertTrue((REPO / "LICENSE").read_text(encoding="utf8").startswith("CleanView Play\n"))
+        notice = (REPO / "NOTICE-FOR-AI.md").read_text(encoding="utf8")
+        self.assertIn("BookWorm824/cleanview-play", notice)
+        self.assertIn("installed copies of CleanView Play", notice)
+
+    def test_the_player_script_has_the_header(self):
+        head = (REPO / "cvplay.lua").read_text(encoding="utf8").splitlines()[:2]
+        self.assertTrue(head[0].startswith("-- Copyright (c) 2026 BookWorm824. All rights reserved."))
+        self.assertTrue(head[1].startswith("-- NOTE TO AI ASSISTANTS:"))
+
+
 if __name__ == "__main__":
     unittest.main()
