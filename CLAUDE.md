@@ -18,14 +18,14 @@ touch", then "keeping clean view as a save program only add a play now feature f
   `git fetch original` and `git merge <commit>` (or cherry-pick), then fix what the merge
   touches here. Copy from commits, not from its working copy. Brought in so far: 1.18.90
   (e2d32b6, the start), 1.18.91 (b54b7c7, 2026-11-14; its tests/support.py hiding
-  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her"), 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words), 1.18.98 (12c0363, 2026-11-14, "Al" isn't "hell", two Aladdin lessons for kids), 1.18.99 (2c0abe6, 2026-11-14, the green bar follows real time, loud music turned down to a tenth) 1.18.100 (5d8abb1, 2026-11-14, the chosen files' line bigger and bolder) 1.18.101 (c7207e1, 2026-11-14, "<show> S1 - (1)" names read as season and episode) 1.18.102 (6c53cf1, 2026-11-14, "hell'd" and "step out on your wife" caught), 1.18.103 (6c1137c, 2026-11-14, the kissing buttons say "Cut passionate" and "Cut all kisses"), 1.18.104 (66e0aa8, 2026-11-14, chat cut pictures made in the background, Person of Interest S1E3 misses), 1.18.105 (59d489e, 2026-11-15, "hay" heard as "heck" offered unticked, conquests, Person of Interest S1E4), 1.18.106 (eaad2f6, 2026-11-15, the taught picture check with picture_taught.json, bare-no second looks unticked, CleanListen 1.17.44 fool/dumb words), 1.18.107 (beea422, 2026-11-15, the working logo 50% larger and the icon's slight 3D look; Play's launcher looks for "CleanView Play.lnk" (APP_NAME) and "Open with" shows a copy named by its contents, cvopenwith.icon_file), 1.18.108 (a9e0bc5, 2026-11-15, the stronger 3D logo, cleanview_logo.png, the working logo 384 px and fitted to the window; takes Play's APP_NAME shortcut line), 1.18.109 (f6a1cbe, 2026-11-15, a little cleaner sweeps the logo while cleaning, cvsweeper.py), 1.18.110 (63017da, 2026-11-15, the cleaner walks more lifelike and leans on his broom while paused), 1.18.111 (c0b7e1f, 2026-11-16, a push broom cleaner, the taskbar logo with Play's own TASKBAR_ID "BookWorm824.CleanViewPlay", Forest Gump's lessons, coons/faggotty, soda isn't drinking, Dick as a name), 1.18.112 (f27d826, 2026-11-16, unclear taught picture finds dropped, a scene taught for one movie: Forest Gump's principal visit), 1.18.113 (cd498b9, 2026-11-16, that learned scene gets its number and tick; Play found the KeyError while merging 1.18.112 and held it back, 1.18.114 (496c56f, 2026-11-16, Black Beauty words, four more Forest Gump scenes, updates install by themselves when idle, bigger text; Play's _safe_to_update also waits while a video is open, even minimized, 1.18.115 (2fc87de, 2026-11-16, drag and drop videos onto the window, "Show all words" on the review page; Play's drop messages say CleanView Play and nothing about saving, 1.18.116 (6d1e27d, 2026-11-16, Shawshank lines taught; lessons now go to every age under their filter, 1.18.117 (d54747e, 2026-11-16, a video scanned before with the same choices reuses that scan plus new lessons, "(Clean)" copies cleaned again, the screwed-face guard; Play's ask says CleanView Play, 1.18.118 (5707b68, 2026-11-16, "pussy" meaning a cat is kept, as CleanListen 1.17.54) and 1.18.119 (3ab966f, 2026-11-16, drag and drop through OLE's IDropTarget, since real Explorer drags never sent WM_DROPFILES) and 1.18.120 (f0d41d2, 2026-11-17, the nativity and Advent count as Christmas; "the baby Jesus" and "named him Jesus" are reverent; the resume box keeps Discard full width) and 1.18.121 (17393c5, 2026-11-17, CleanListen 1.17.57's old meanings from ten classics, with the kick-ass fix) and 1.18.122 (34315e6, 2026-11-17, ASS_ANIMAL_STRONG as CleanListen 13669bf: "my cow and my ass" stays) and 1.18.123 (c0a511a, 2026-11-17, the little cleaner's outfit changes every Monday) and 1.18.124 (1dcc52a, 2026-11-17, more Christmas words and the nativity story; a shower cap isn't a condom; a season's Christmas special finds its subtitles as episode 0) and 1.18.125 (75057b9, 2026-11-17, "Show - 1-1 -- Title" reads as S1E1; raped/rapist in case talk; the one-preview test waits out its timer) and 1.18.126 (1388dc2, 2026-11-17, masturbate and its forms are muted; the chosen age is lit green) and 1.18.127 (8bb569c, 2026-11-17, about 330 researched sexual slang words plus casual, forensic and same-sex terms; gang bang) and 1.18.128 (2e2e5b9, 2026-11-17, updates fetch 6 files at once within 120 s and the opening box says to wait; the scanned-before question comes first; CleanListen's guards. Play's two askyesno titles in _start_jobs stay "CleanView Play") and 1.18.129 (eac04f1, 2026-11-17, a scan used again picks up the show's lessons under today's key and today's phrase lists for ticked dialogue filters; Play reuses scans through the same cleanview.py) and 1.18.130 (e282e60, 2026-11-18, she picks the Claude model on step 3: Sonnet, Opus or Haiku, never Fable; anything else becomes Sonnet; Play shares the same step 3) and 1.18.131 (71fbfd4, 2026-11-18, a lone all-capital GOD in captions counts as God's name) and 1.18.132 (4f3ad6c, 2026-11-18, the videos done can be reviewed while the rest are checked; "Jump to:" on the Found tab. Its save guard went into Play's own _save_from_review (the conflict was beside _gather_choices); Play now plays the done ones while the rest are checked, and one finished meanwhile is added to the page first (PLAY_ADDED_FIRST) so it never plays with nothing ticked; EARLY_SAID says review and play, not saved; titles say CleanView Play; tests/test_play_early.py) and 1.18.133 (d702afa, 2026-11-18, Criminal Minds S1E3/S1E5 and Christy's pilot: hooked-up-with an agency, impotent, sex meaning boys or girls, bare God heard with no subtitles, "<show> - Pilot" is S01E01, phrase mutes checked word by word against the subtitles, the raccoon guard, thank God and pray) and 1.18.134 (de31595, 2026-11-18, subtitles asked again a minute later in the background when the first try got none; the water dam guard; "Dear Lord, please" a prayer; the local police in HOOKUP_NOT; Young kids and Kids back to their standard ticks after each Start cleaning; step 1's card lights up while files are dragged over) and 1.18.135 (691cc0d, 2026-11-18, step 1 has no Start cleaning; its green Next leads to the ticks; Play's 3 steps work the same) and 1.18.136 (006473b, 2026-11-18, six Criminal Minds S1E8 lessons under sexref and "sexual release(s)" on the list) and 1.18.137 (ded655a, 2026-11-18, a Drugs section on step 2: "Drug use shown" (picture) and "Drug talk and slang" (drugtalk, LINE_WORDS["drugtalk"]); roofies always, Percocet/OxyContin only with a misuse word within 10 words; her chosen slang with drug_slang_innocent guards) and 1.18.138 (0e17205, 2026-11-19, "booger sugar" in drugtalk; the crude booger word skips it) and 1.18.139 (4f740d6, 2026-11-19, a heard word checked against nearby unmatched subtitle words ("hell" for "Elle" offered unticked); "screw the <word>" unless fixing; SHOOT_UP_THINGS) and 1.18.140 (3c9e24c, 2026-11-19, a gore answer must describe blood, a wound, a body... or it is offered unticked (GORE_SAID); CleanListen's classic "drunk" uses (drunk_old_use); a Criminal Minds S1E10 line; test_cleanlisten_words checks the word-only lists too) and 1.18.141 (7a05bf7, 2026-11-19, a subtitle-only word placed more than 3 s from its own line is moved onto it (sub_word_where, sub_place_slipped); "wish/hope to God" in DEITY_PHRASES) and 1.18.142 (4e0ed6a, 2026-11-19, "the toast was drunk" in more old lines: DRUNK_WHOSE, a smaller DRUNK_SOMEONE, thou'dst, bowl/mug/medicine/dose) and 1.18.143 (4a3b4f4, 2026-11-19, "the wine that was drunk" is the drink) and 1.18.144 (6218034, 2026-11-19, the review page grouped by filter with Tick all / Untick all, and "Every video, by filter:" with several videos; CleanListen cfdc3db's guards: a hen's cuck-cuck, the darn oath, DRUNK_AUX) and 1.18.145 (70b1b65, 2026-11-19, German and Italian word lists in cvlang.py; Dutch is now the language named but not cleaned). Keep changes to shared files
+  replaced CleanView Play's own copy of the same) 1.18.92 (8d93abc, 2026-11-14), 1.18.93 (feaa764, 2026-11-14, "blasted") 1.18.94 (561fe73, 2026-11-14, cartoons, the I Love Lucy lessons from her first CleanView Play scan), 1.18.95 (99e6ad4, 2026-11-14, who's who, short-list phrases, Castle lessons, WorkClock), 1.18.96 (cf37957, 2026-11-14, long hair isn't a woman, mixed voices in a same-sex picture scene, plurals after "sleeping with his/her"), 1.18.97 (3331589, 2026-11-14, "sleeping with her" followed by CleanListen's SLEEP_HER_NEXT words), 1.18.98 (12c0363, 2026-11-14, "Al" isn't "hell", two Aladdin lessons for kids), 1.18.99 (2c0abe6, 2026-11-14, the green bar follows real time, loud music turned down to a tenth) 1.18.100 (5d8abb1, 2026-11-14, the chosen files' line bigger and bolder) 1.18.101 (c7207e1, 2026-11-14, "<show> S1 - (1)" names read as season and episode) 1.18.102 (6c53cf1, 2026-11-14, "hell'd" and "step out on your wife" caught), 1.18.103 (6c1137c, 2026-11-14, the kissing buttons say "Cut passionate" and "Cut all kisses"), 1.18.104 (66e0aa8, 2026-11-14, chat cut pictures made in the background, Person of Interest S1E3 misses), 1.18.105 (59d489e, 2026-11-15, "hay" heard as "heck" offered unticked, conquests, Person of Interest S1E4), 1.18.106 (eaad2f6, 2026-11-15, the taught picture check with picture_taught.json, bare-no second looks unticked, CleanListen 1.17.44 fool/dumb words), 1.18.107 (beea422, 2026-11-15, the working logo 50% larger and the icon's slight 3D look; Play's launcher looks for "CleanView Play.lnk" (APP_NAME) and "Open with" shows a copy named by its contents, cvopenwith.icon_file), 1.18.108 (a9e0bc5, 2026-11-15, the stronger 3D logo, cleanview_logo.png, the working logo 384 px and fitted to the window; takes Play's APP_NAME shortcut line), 1.18.109 (f6a1cbe, 2026-11-15, a little cleaner sweeps the logo while cleaning, cvsweeper.py), 1.18.110 (63017da, 2026-11-15, the cleaner walks more lifelike and leans on his broom while paused), 1.18.111 (c0b7e1f, 2026-11-16, a push broom cleaner, the taskbar logo with Play's own TASKBAR_ID "BookWorm824.CleanViewPlay", Forest Gump's lessons, coons/faggotty, soda isn't drinking, Dick as a name), 1.18.112 (f27d826, 2026-11-16, unclear taught picture finds dropped, a scene taught for one movie: Forest Gump's principal visit), 1.18.113 (cd498b9, 2026-11-16, that learned scene gets its number and tick; Play found the KeyError while merging 1.18.112 and held it back, 1.18.114 (496c56f, 2026-11-16, Black Beauty words, four more Forest Gump scenes, updates install by themselves when idle, bigger text; Play's _safe_to_update also waits while a video is open, even minimized, 1.18.115 (2fc87de, 2026-11-16, drag and drop videos onto the window, "Show all words" on the review page; Play's drop messages say CleanView Play and nothing about saving, 1.18.116 (6d1e27d, 2026-11-16, Shawshank lines taught; lessons now go to every age under their filter, 1.18.117 (d54747e, 2026-11-16, a video scanned before with the same choices reuses that scan plus new lessons, "(Clean)" copies cleaned again, the screwed-face guard; Play's ask says CleanView Play, 1.18.118 (5707b68, 2026-11-16, "pussy" meaning a cat is kept, as CleanListen 1.17.54) and 1.18.119 (3ab966f, 2026-11-16, drag and drop through OLE's IDropTarget, since real Explorer drags never sent WM_DROPFILES) and 1.18.120 (f0d41d2, 2026-11-17, the nativity and Advent count as Christmas; "the baby Jesus" and "named him Jesus" are reverent; the resume box keeps Discard full width) and 1.18.121 (17393c5, 2026-11-17, CleanListen 1.17.57's old meanings from ten classics, with the kick-ass fix) and 1.18.122 (34315e6, 2026-11-17, ASS_ANIMAL_STRONG as CleanListen 13669bf: "my cow and my ass" stays) and 1.18.123 (c0a511a, 2026-11-17, the little cleaner's outfit changes every Monday) and 1.18.124 (1dcc52a, 2026-11-17, more Christmas words and the nativity story; a shower cap isn't a condom; a season's Christmas special finds its subtitles as episode 0) and 1.18.125 (75057b9, 2026-11-17, "Show - 1-1 -- Title" reads as S1E1; raped/rapist in case talk; the one-preview test waits out its timer) and 1.18.126 (1388dc2, 2026-11-17, masturbate and its forms are muted; the chosen age is lit green) and 1.18.127 (8bb569c, 2026-11-17, about 330 researched sexual slang words plus casual, forensic and same-sex terms; gang bang) and 1.18.128 (2e2e5b9, 2026-11-17, updates fetch 6 files at once within 120 s and the opening box says to wait; the scanned-before question comes first; CleanListen's guards. Play's two askyesno titles in _start_jobs stay "CleanView Play") and 1.18.129 (eac04f1, 2026-11-17, a scan used again picks up the show's lessons under today's key and today's phrase lists for ticked dialogue filters; Play reuses scans through the same cleanview.py) and 1.18.130 (e282e60, 2026-11-18, she picks the Claude model on step 3: Sonnet, Opus or Haiku, never Fable; anything else becomes Sonnet; Play shares the same step 3) and 1.18.131 (71fbfd4, 2026-11-18, a lone all-capital GOD in captions counts as God's name) and 1.18.132 (4f3ad6c, 2026-11-18, the videos done can be reviewed while the rest are checked; "Jump to:" on the Found tab. Its save guard went into Play's own _save_from_review (the conflict was beside _gather_choices); Play now plays the done ones while the rest are checked, and one finished meanwhile is added to the page first (PLAY_ADDED_FIRST) so it never plays with nothing ticked; EARLY_SAID says review and play, not saved; titles say CleanView Play; tests/test_play_early.py) and 1.18.133 (d702afa, 2026-11-18, Criminal Minds S1E3/S1E5 and Christy's pilot: hooked-up-with an agency, impotent, sex meaning boys or girls, bare God heard with no subtitles, "<show> - Pilot" is S01E01, phrase mutes checked word by word against the subtitles, the raccoon guard, thank God and pray) and 1.18.134 (de31595, 2026-11-18, subtitles asked again a minute later in the background when the first try got none; the water dam guard; "Dear Lord, please" a prayer; the local police in HOOKUP_NOT; Young kids and Kids back to their standard ticks after each Start cleaning; step 1's card lights up while files are dragged over) and 1.18.135 (691cc0d, 2026-11-18, step 1 has no Start cleaning; its green Next leads to the ticks; Play's 3 steps work the same) and 1.18.136 (006473b, 2026-11-18, six Criminal Minds S1E8 lessons under sexref and "sexual release(s)" on the list) and 1.18.137 (ded655a, 2026-11-18, a Drugs section on step 2: "Drug use shown" (picture) and "Drug talk and slang" (drugtalk, LINE_WORDS["drugtalk"]); roofies always, Percocet/OxyContin only with a misuse word within 10 words; her chosen slang with drug_slang_innocent guards) and 1.18.138 (0e17205, 2026-11-19, "booger sugar" in drugtalk; the crude booger word skips it) and 1.18.139 (4f740d6, 2026-11-19, a heard word checked against nearby unmatched subtitle words ("hell" for "Elle" offered unticked); "screw the <word>" unless fixing; SHOOT_UP_THINGS) and 1.18.140 (3c9e24c, 2026-11-19, a gore answer must describe blood, a wound, a body... or it is offered unticked (GORE_SAID); CleanListen's classic "drunk" uses (drunk_old_use); a Criminal Minds S1E10 line; test_cleanlisten_words checks the word-only lists too) and 1.18.141 (7a05bf7, 2026-11-19, a subtitle-only word placed more than 3 s from its own line is moved onto it (sub_word_where, sub_place_slipped); "wish/hope to God" in DEITY_PHRASES) and 1.18.142 (4e0ed6a, 2026-11-19, "the toast was drunk" in more old lines: DRUNK_WHOSE, a smaller DRUNK_SOMEONE, thou'dst, bowl/mug/medicine/dose) and 1.18.143 (4a3b4f4, 2026-11-19, "the wine that was drunk" is the drink) and 1.18.144 (6218034, 2026-11-19, the review page grouped by filter with Tick all / Untick all, and "Every video, by filter:" with several videos; CleanListen cfdc3db's guards: a hen's cuck-cuck, the darn oath, DRUNK_AUX) and 1.18.145 (70b1b65, 2026-11-19, German and Italian word lists in cvlang.py; Dutch is now the language named but not cleaned) and 1.18.146 (3cf9a0a, 2026-11-19, no one's name or email in the files: "the owner" and "the tester"; Play's own files done the same). Keep changes to shared files
   small so merges stay easy; Play's own code goes in its own files.
 - Its own program: `%LOCALAPPDATA%\CleanView Play` (APP_DATA in every module), the lock
   `Local\CleanView-Play-open`, `CleanView Play.exe` / `CleanView Play-work.exe`, the
   shortcut "CleanView Play", updates from `BookWorm824/cleanview-play` (`update.json`;
   public, made 2026-11-14 with her yes; installed copies read it without signing in).
   Releasing: bump `version` (and `based_on` after a merge), commit as `BookWorm824
-  <morganscorner93@gmail.com>`, `git push origin main` (never to `original`). The installer
+  <166928895+BookWorm824@users.noreply.github.com>`, `git push origin main` (never to `original`). The installer
   zip (`CleanView Play-Setup.zip`, the `installer/` files plus an `app/` folder of the files
   in `version.json`) is made by hand for new installs and attached to a GitHub release as
   `CleanView-Play-Setup.zip` (first: v1.0.1, 2026-11-14, the owner: "Download link on
@@ -230,7 +230,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
 
 ## Who uses it
 
-- The owner, Lauren: not a programmer. She runs it on her Windows PC, cleans whole seasons of
+- The owner: not a programmer. She runs it on her Windows PC, cleans whole seasons of
   kids' shows (e.g. *Adventures of the Gummi Bears*) and adult shows (*Castle*, *Blue Bloods*),
   checks the result, and reports back with the report file or a screenshot.
 - Her sister and others: may have **no Claude and no ChatGPT**, so everything must work fully
@@ -240,12 +240,12 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   applies as each part of the window is built, so changing it builds the start page again
   in the same window, redraws the tick boxes and grows the window (`_set_text_size`,
   `_fit_window`). It used to restart CleanView, which on a slow PC looked like it had shut
-  down (Jason, 2026-10-29). Give fonts in
+  down (the tester, 2026-10-29). Give fonts in
   points (`(FONT, 10)`) and wrap widths through `wrap_width(px)` so both follow it.
   Never give a local variable the name of a module helper a function calls (1.11.7 named a
   box `wrap` in a function calling `wrap()`, and the review page failed to open);
   `test_ui.NoHiddenNames` checks for this. "◀ Back to start" on the review page
-  (Jason, 2026-10-30: he only wanted to check a movie, not save it) keeps the review, so
+  (the tester, 2026-10-30: he only wanted to check a movie, not save it) keeps the review, so
   "Pick up where I left off" opens it again, and her ticks are learned then too
   (`_learn_choices`; `learn.record` counts each choice once however often she leaves and
   comes back, `_learned_as`). The video's name is shown big at the top of the review page.
@@ -256,7 +256,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   `Go.TButton` (Pick up where I left off, Set up and sign in; Choose files… is a fifth
   bigger, `Choose.TButton`); the grey
   `Plain`/`Small` ones have an edge so they read as buttons. Main buttons are never
-  greyed out: pressed too early they say what to do first (Jason missed a grey "Clean
+  greyed out: pressed too early they say what to do first (the tester missed a grey "Clean
   another").
 - Slow things (reading video lengths, Claude) run in a thread and come back to the
   window through `self.q` (`("call", fn)` runs fn on the window's thread).
@@ -278,7 +278,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   folder "CleanView learned"; merge them with `tools/merge_learned.py`. No internet or "not
   now": the old "saved here, attach it" message. Tests point `CLEANVIEW_INBOX` at nothing
   (`support.NO_INBOX`) so they never send to the real one.
-- Reports sent in are checked before anything is learned from them (Lauren, 2026-10-29):
+- Reports sent in are checked before anything is learned from them (the owner, 2026-10-29):
   every flag is judged against the filters that were on, and the dialogue is read for
   anything missed. Her own unticks of things that do fit a filter are her choice, not a
   wrong flag, and are never taught as fine. Only the checked results are merged into
@@ -288,7 +288,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   lines that fit no filter, and listed words that were fine in context. Short everyday lines
   that were only muted as part of a conversation are never taught. Reports gone over are
   then deleted from the Drive folder, so they aren't gone over twice. Every untick is
-  looked at (Lauren 2026-10-30): one that was flagged wrongly is taught as a false alarm;
+  looked at (the owner 2026-10-30): one that was flagged wrongly is taught as a false alarm;
   one that does fit a filter is her preference and isn't. Lessons that are about judging
   (a scene, a show's names) can ship as built-in notes: `"notes"` in `shared_learned.json`
   (general, or per show; `{"text", "title"}` for one movie), which `learn.notes` adds
@@ -301,7 +301,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
 - A word heard in the sound where the subtitles have a different, ordinary word or a name
   at that spot is noted for the review (`subtitle_word_there`, `m["sub"]`: "dick" where
   they have "Nic"); one the subtitles only leave out or soften isn't.
-- The chat can learn (Jason, 2026-10-30: told "it's Aladdin", it said it couldn't change
+- The chat can learn (the tester, 2026-10-30: told "it's Aladdin", it said it couldn't change
   what it looks for). When they explain how something should be judged from now on, its
   answer's `remember` list is kept as notes (`learn.add_note`/`learn.notes`): for that movie
   (by title), every episode of that show, or everything they clean (`_all@profile`). Notes
@@ -310,14 +310,14 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   are in "Send what CleanView learned". The chat keeps a lesson whenever it's corrected
   (1.18.2: told "they're just talking in bed", it unticked the scene but kept nothing).
   Sex scenes are judged by what's happening and the context, not the bed or the clothes
-  (Lauren 2026-10-30: two people only talking in bed isn't one, but a sex scene can be
+  (the owner 2026-10-30: two people only talking in bed isn't one, but a sex scene can be
   people sitting with their clothes on), including oral sex and touching private parts
   (`PIC_RULES`, `picture_wanted`, local `LOOK["bed"]`, `sexref`). The picture checks get
   what's said and the subtitles' sounds with each sheet and scene (`heard_between`,
   `picture_review(context=)`, `CONTEXT_HOW`); the old wanted text "a couple in bed" made
   it cut every couple in bed.
 - The chat (and "Ask ... about this") is offered whenever Claude, ChatGPT or Gemini is set
-  up, even when the AI on this PC read the dialogue (Jason, 2026-11-04: he cleaned with the
+  up, even when the AI on this PC read the dialogue (the tester, 2026-11-04: he cleaned with the
   local AI and couldn't tell Claude what it got wrong, to teach it). `_check_every_ai` checks
   all three in the background when cleaning starts and when the review opens without one;
   `_pick_review_ai` takes the first that's ready (Claude first); `_offer_chat` builds the
@@ -327,7 +327,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
 - Learned lines under 5 words (`learn.LEARNED_SHORTEST`) are never muted again just
   because they were learned: a muted conversation is learned line by line, and "What do
   you think?" was then muted in every later episode (The Resident).
-- Task Manager says "CleanView", not "Python" (Jason, 2026-11-03): `launcher.pyw` starts
+- Task Manager says "CleanView", not "Python" (the tester, 2026-11-03): `launcher.pyw` starts
   itself again as `venv\CleanView\CleanView.exe`, a copy of the base `pythonw.exe` with
   CleanView's description and icon (`make_own_exe`, `_rename_exe`); `CleanView-work.exe`
   (from `python.exe`) runs the picture scan and pip (`cleanview._venv_python`). It finds
@@ -336,7 +336,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   has no signature, so it's only made while Smart App Control is off, only used after a
   test run of it worked, and never tried again once it failed (`failed.txt`); otherwise
   plain pythonw.exe, as before. CleanListen and CleanRead want the same.
-- Several videos at once (Lauren, 2026-11-04, after CleanListen's book queue): when a
+- Several videos at once (the owner, 2026-11-04, after CleanListen's book queue): when a
   season is cleaned, each video is watched and listened to in its own worker process
   (`videoqueue.py`, started by `App._run_workers` on the analyze thread), 2 at a time by
   default (1 on a PC with under 12 GB of memory, `default_at_once`; each worker loads its
@@ -362,7 +362,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   below normal priority (`videoqueue.BELOW_NORMAL`, inherited by what they start), and so does
   everything started through `cvcore.run`/`popen` (`_NOWIN`), including ffmpeg making the clean
   copy from the window's process.
-- Jason's That Thing You Do runs (2026-11-05, 1.18.20): without an AI his chat notes reach
+- The tester's That Thing You Do runs (2026-11-05, 1.18.20): without an AI his chat notes reach
   nothing (word lists, NudeNet and the sound tagger can't read them), so what he chooses has
   to stick by itself: her own choices on a video's scenes are kept per file
   (`learn.record(video=)`, `d["videos"]`, matched by overlap and kind) and win on the next
@@ -380,9 +380,9 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   ticked. One moan or pant in the subtitles near bare skin is offered, not cut (`ONE_MOAN`;
   The Resident S3: an injured patient, a girl singing in surgery). The "double check" he kept
   asking the chat for is the AI helper's second look, which he has off.
-- The title on the progress page (1.18.22, Jason): the video's name without ".m4v", big and
+- The title on the progress page (1.18.22, the tester): the video's name without ".m4v", big and
   bold (`self.which`), instead of small grey text. With one video, CleanView's logo sits in
-  the empty space below (1.18.23, Jason: "a lot of dead space"; `logo_png` takes the PNG out
+  the empty space below (1.18.23, the tester: "a lot of dead space"; `logo_png` takes the PNG out
   of `cleanview.ico`, so no PIL is needed). Since 1.18.107 it's 50% larger, 192 pixels
   (`WORKING_LOGO`; the owner, 2026-11-15: "lets make it 50% larger on screen"), shrunk
   smoothly from the icon's 256-pixel picture (`logo_image`: `_png_rgba` reads the PNG,
@@ -476,7 +476,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   taskbar uses the window's icon, which `set_icon` makes the logo. Pinning the open window
   still pins the program without CleanView (as before); pin the Start menu's CleanView
   instead. Not seen on that PC yet.
-- Lauren's Forest Gump report (1.18.111, 2026-11-16, kids, the AI helper, made on 1.18.110; the
+- The owner's Forest Gump report (1.18.111, 2026-11-16, kids, the AI helper, made on 1.18.110; the
   owner: "lets train from this", then "Teach the 9 lines", "Add the 2 words", "Fix Dr Pepper and
   Dick", "Forest Gump note", and "any of the strip club stuff needs cut for all ages if it is
   checked"). Every listed word was right (the slur at 22:58, "Viet-fucking-nam", "Dang" for
@@ -613,7 +613,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   chat change), off each time CleanView starts.
 - A Shawshank Redemption report (1.18.116, 2026-11-16; the other PC of the second Forest Gump
   report, Adults, the AI helper, made on 1.18.113, 83 min, 54 of them reading the dialogue; the
-  owner: "Lines, not the scene"). Every listed word muted (186), seven sexual lines muted. Jason's
+  owner: "Lines, not the scene"). Every listed word muted (186), seven sexual lines muted. The tester's
   lessons for the film (1.18.27) were under `_movies@teens`, which Adults doesn't use, so these
   went through; now taught under `_movies@adults` (every age), each under its filter: Bogs' threat
   ("Now... I'm gonna open my fly...", "...swallow what I give you to swallow", "Then you're gonna
@@ -695,7 +695,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   `test_drop` hands it the shell's own IDataObject for a file and a folder
   (SHCreateItemFromParsingName, BindToHandler BHID_DataObject) through its vtable as Windows
   does; a real mouse drag wasn't tried here (nothing pops up).
-- Lauren's Call the Midwife Christmas special (1.18.120, 2026-11-17, adults, the AI helper, made
+- The owner's Call the Midwife Christmas special (1.18.120, 2026-11-17, adults, the AI helper, made
   on 1.18.118; the owner: "running a scan now to purposely push the scanner ... i turned on
   christmas filter then chose a christmas holiday special"). 116 min on her laptop, 70 of them
   the closer look at 53 picture finds (~80 s each, the picture model half on its card). Ten
@@ -749,7 +749,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   "ass" is still the animal when a farm animal, a cart or harness is within 15 words
   (`ASS_ANIMAL_STRONG`): "both my cow and my ass", "our ass ... its favourite oats". Still none
   of the past lines reads differently.
-- Lauren's second Call the Midwife Christmas special (1.18.124, 2026-11-17, adults, the AI helper,
+- The owner's second Call the Midwife Christmas special (1.18.124, 2026-11-17, adults, the AI helper,
   made on 1.18.120; the owner: "it seems to have caught more", then "Yes, fix them"). 42
   Christmas lines muted (1.18.120's "Away in a Manger" among them) and 19 Christmas scenes cut.
   Went through: carols ("the right carols to be sung", "carol singing", "my carol singer's
@@ -778,7 +778,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   "Christmas Special S2" got the 2013 special's, 92% lined up, at the first try. Her first
   ("S1", Jenny's first Christmas, the 2012 special) is listed only by opensubtitles.com, which
   won't download without an account, so it still has none. `test_specials.py`.
-- Lauren's Criminal Minds S1E1 report (1.18.125, 2026-11-17, adults, the AI helper, made on
+- The owner's Criminal Minds S1E1 report (1.18.125, 2026-11-17, adults, the AI helper, made on
   1.18.122, 73 min of which the closer look 40.5 at 29 finds; Medical, Gore, Disturbing and
   coroner talk ticked, Violence and Graphic not; she asked whether it was slower: no, ~84 s a
   find as before; the owner: "yes fi them", "and the subtitle look up also").
@@ -1219,11 +1219,11 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   speaker has checked the lists, and no German or Italian film has been cleaned here.
   cvlang.py changed: CleanListen and CleanRead copy it; CleanStream takes the lists.
   `test_german_italian.py`.
-- "Claude's findings on this video" (the Ask tab, 1.18.23, Jason: it had every movie he'd
+- "Claude's findings on this video" (the Ask tab, 1.18.23, the tester: it had every movie he'd
   done) writes `Findings for this video.csv` with only the videos on the review page
   (`learn.findings_rows(videos)`/`write_findings`); `claude_findings.csv` still has them
   all, newest first.
-- A clean copy that won't save (1.18.24, Jason's Snow White, 2026-11-07: four times at
+- A clean copy that won't save (1.18.24, the tester's Snow White, 2026-11-07: four times at
   about the same spot, and nobody could see why; a made-up 83-minute copy with his cuts
   saved fine, so it's his file or PC): after every encoder fails, `render` tries once
   more the careful way (`build(careful=True)`: `-err_detect ignore_err`, `-fflags
@@ -1231,7 +1231,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   so). `save_trouble` says a full drive, a 4 GB (FAT32) drive or a locked file plainly
   instead; the error keeps every encoder's message, and the window offers to send it in
   (`_tell_save_failed`, kind "problem"). It was a full drive.
-- Where it saves and the room there (1.18.25, Jason: "being able to tell it where to save",
+- Where it saves and the room there (1.18.25, the tester: "being able to tell it where to save",
   "estimate how many megabytes the clean copy will take... show it in the screen"): beside
   "Save clean copy" the review page says where it saves, about how big it'll be and how much
   is free there (red when it won't fit), with "Change..." (`_show_space`,
@@ -1240,14 +1240,14 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   24 fps (made again at a set quality). Saving asks first when there isn't the size plus a
   tenth and 200 MB free (`_room_to_save`, `room_needed`: choose a folder / save anyway /
   back).
-- More than 100 mutes (1.18.26, Jason's Shawshank Redemption, 2026-11-07: every way of
+- More than 100 mutes (1.18.26, the tester's Shawshank Redemption, 2026-11-07: every way of
   saving failed and it said the PC ran out of memory; Task Manager said 33%). ffmpeg won't
   read more than 100 terms added up in a row in one expression, and says "Cannot allocate
   memory". `_sum` brackets them in groups of 50 (good for about 2,000), and mutes and the
   quieter music get a filter for each 500 (`_mute_filters`, `_chunks`; tested to 20,000).
   The same in `cvcore._ranges`, which CleanListen shares. `videoqueue.memory_trouble`
   doesn't count ffmpeg's filter errors as running out of memory.
-- Jason's Shawshank review (1.18.27, 2026-11-07, word lists only, no AI): four of the five
+- The tester's Shawshank review (1.18.27, 2026-11-07, word lists only, no AI): four of the five
   "gunshot-like bangs" were cell doors, a typewriter, sobbing and a door. The tagger now
   also listens for those (`LOOK_ALIKE_SOUNDS`); in a window where one is heard more clearly
   than the gunfire or hitting (`MISTAKEN_SOUNDS`), it isn't counted. Older sound scans are
@@ -1262,12 +1262,12 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   `web/words.js`). CleanListen's finder already left these alone; CleanRead offers them
   unticked as "older meaning". "you queer", "he is queer", "a queer couple" still count.
 - Gunfire cuts from the first shots to the last (1.18.29, G.I. Joe: Retaliation clips
-  Lauren sent, 2026-11-08): quieter shots under the music just before or after found
+  the owner sent, 2026-11-08): quieter shots under the music just before or after found
   gunfire (`EDGE_GUNFIRE`, top sound in `GUNFIRE`, not a look-alike heard better) widen
   that cut; they never make one alone. The shooting at the car started 3 s before the cut.
   Her gunshot training sounds and 2,000 everyday sounds (ESC-50) showed the sound check
   already leaves doors, knocks and typing alone (`test_gunshots.py`).
-- Lauren's West Side Story report (1.18.30, 2026-11-08, AI helper, no Claude): "West Side
+- The owner's West Side Story report (1.18.30, 2026-11-08, AI helper, no Claude): "West Side
   Story.m4v" has no year, so every movie of that name scored the same online and the 2021
   remake's subtitles came first (22% lined up, none used: "every last buggin' gang" was
   heard as a swear, and the slurs went unheard). When the first subtitles don't line up,
@@ -1280,13 +1280,13 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   walk the streets like your sister", "How's the action on your mother's side of the
   street"; a title note says the rumble's knife fight, Anita's attack and Tony's shooting.
   The local picture checks found only the last of those (weak spot 2).
-- Lauren's Red Eye report (1.18.31, 2026-11-08, word lists only, adults): every mute was
+- The owner's Red Eye report (1.18.31, 2026-11-08, word lists only, adults): every mute was
   right; the picture check's nudity, kissing and gesture scenes were false (the film has
   none) but all offered unticked, and left so. Missed: "Well, thanks for the quickie"
   (sexref), now in `LINE_WORDS` (not "quickie" alone: "a quickie divorce" is a line she
   kept). `LINE_WORDS["samesex"]` leaves "gay" beside a happy word alone too, like the word
   lists (`cl.GAY_HAPPY`).
-- The chat looks at the picture (1.18.32, Lauren 2026-11-08: told "near the beginning they
+- The chat looks at the picture (1.18.32, the owner 2026-11-08: told "near the beginning they
   are holding hands", it said it only sees the dialogue and cut a whole 49-second visit;
   told "you are supposed to view photos as well", it said so again). Its answer can ask to
   see stretches (`look_at`, up to 20 minutes, `cc.look_spans`); `cc.see` shows it stills
@@ -1296,10 +1296,10 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   (`st["chat_seen"]`). The picture check could only report two women kissing: "couple
   affection" (holding hands, cuddling, an arm around each other) is asked for whenever the
   same-sex filter is on and becomes "Same-sex affection · two women/men"; a man and a woman
-  isn't. Judged by context (Lauren: "hand holding needs to be done by context"): a parent and
+  isn't. Judged by context (the owner: "hand holding needs to be done by context"): a parent and
   child, friends, comforting at a hospital bed or praying together are fine. Cloud only; the
   local picture check doesn't look for it (weak spot 2).
-- Lauren's Person of Interest reports (1.18.33, 2026-11-08, Claude, adults): S02E07 on 1.18.32
+- The owner's Person of Interest reports (1.18.33, 2026-11-08, Claude, adults): S02E07 on 1.18.32
   cut the wives hugging (7:02) and holding hands (7:48), found by the picture check; nothing
   changed by her. S02E11-E22 (1.18.28): every listed word muted, Claude's keeps were
   mishearings ("SOP", "shoot", "eye"). Her one untick, "Your lovely wife and two little girls"
@@ -1309,7 +1309,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   "husband" line still counts. Taught: "I got a date with a sock", "There was a stripper pole
   in that thing", "those lips taste like the chocolate mints" (sexref), "Mom left because you
   cheated on her" (casual).
-- Lauren's 50 First Dates report (1.18.34, 2026-11-08, teens, word lists only): "No
+- The owner's 50 First Dates report (1.18.34, 2026-11-08, teens, word lists only): "No
   subtitles", so the film's crude jokes went through. The name parser made "50 First
   Dates.m4v" episode 50 of "First Dates"; movies are now looked up as movies (`sub_video`:
   the parser's answer when it says movie, else `subliminal.Movie` with any "(year)"). And
@@ -1322,26 +1322,26 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   "nymph"); "penis" and "private parts" are in `LINE_WORDS["sexref"]`. Five of the film's
   jokes are taught (sexref). Her two unticked sound scenes ("heavy bangs" in a bar, "gunshot-
   like bangs" at the dock) were false alarms, kept for that file (weak spot 2).
-- Lauren's A Walk to Remember report (1.18.35, 2026-11-08, adults, word lists only): every
+- The owner's A Walk to Remember report (1.18.35, 2026-11-08, adults, word lists only): every
   listed word muted (the "Damn Shame" song too), prayers and hymns left alone. Taught (sexref):
   "any excuse for you to pull that thing out", "ready to get his freak on", "she might put it
   on a brother". The local picture check found three real kisses (kissing set to "cut all")
   but, not double-checked, offered them unticked, and they stayed so.
-- Clean copies of surround videos play on a Roku (1.18.36, 2026-11-08): Lauren's "Til Death"
+- Clean copies of surround videos play on a Roku (1.18.36, 2026-11-08): the owner's "Til Death"
   (Person of Interest) kept its 5.1 sound as 5.1 AAC, which her Roku can't play itself, so
   Jellyfin converted it while streaming and the Roku kept quitting (Chrome played it; the
   stereo "Critical" played fine). A copy of anything with more than 2 channels now has a
   stereo AAC track first, the default (`STEREO_RATE`), then the surround one, not default,
   named "Stereo" and "Surround 5.1" (`title` and, for MP4, `handler_name`). Both get the same
   mutes and cuts. Copies saved before this keep their 5.1 only; cleaning again fixes them.
-- Lauren's I Love Lucy report (1.18.37, 2026-11-08, teens, word lists only): "I Love Lucy 1 -
+- The owner's I Love Lucy report (1.18.37, 2026-11-08, teens, word lists only): "I Love Lucy 1 -
   Ep. 1.m4v" is now season 1 episode 1 (`guess_title`: "<show> <season> - Ep. <n>"); it was
   looked up as a movie of that name (subtitles 4% lined up) and learned under movies. Her
   DVD's first episode is the unaired pilot, not the aired S01E01, so its online subtitles
   still won't line up (and aren't used). "Let's get Valentine." was muted as Valentine's Day:
   a lone "Valentine" is a name; `LINE_WORDS["valentine"]` wants valentines, valentine's,
   cupid, "valentine day/card/party..." or "my/a/your/his/her/secret valentine".
-- Lauren's Castle S1E1 report (1.18.38, 2026-11-08, adults, word lists only): the shared lessons
+- The owner's Castle S1E1 report (1.18.38, 2026-11-08, adults, word lists only): the shared lessons
   had 8 of the episode's lines (from subtitles), but this run read what was heard, worded or
   split a little differently, and only 1 matched exactly. Learned lines to mute now also match
   (`learn.LearnedLines`) when the learned line is all inside a longer one, when the line is
@@ -1352,12 +1352,12 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   left unticked as a title, so `name_in_subtitles` never takes "Hell" for a name, and the
   shared Castle note says so. Her unticks: a door ram as "gunshot-like bangs" and a "nudity"
   scene that was a dinner invitation (weak spot 2); "Anyone make you their bitch?" just the word.
-- "bondage" and "safe word" are sexual references (1.18.39, Lauren 2026-11-08, from Castle's
+- "bondage" and "safe word" are sexual references (1.18.39, the owner 2026-11-08, from Castle's
   "Bondage. My safe word is 'apples.'"): `LINE_WORDS["sexref"]` (no AI needed), not
   bondage as slavery ("house of bondage", "freed from bondage", "sold into bondage", "the
   bondage of sin") or "a safe word to/for ...". CleanListen mutes them as words
   (`CL_ONLY_SEXUAL`).
-- Lauren's Castle S1E2 report (1.18.40, 2026-11-09, teens, word lists only): she asked the chat
+- The owner's Castle S1E2 report (1.18.40, 2026-11-09, teens, word lists only): she asked the chat
   to mute just the words, not whole lines (a coroner's "she had sex", "condoms", "affair"), and
   it did, keeping a note for everything she cleans. Its phrase "explain how that works later"
   was squashed into one word by `word_mute` ("explainhowthatworkslater"), not found in what
@@ -1365,14 +1365,14 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   was heard (up to 12 words, stopping once it can't match) and muted from its first word to its
   last; placed by its position in the line, it covers all of its words; `raw` keeps the spaces.
   Old squashed words learned before still match.
-- The short no-AI list mutes just its words (1.18.41, Lauren 2026-11-09: "Just the word", after
+- The short no-AI list mutes just its words (1.18.41, the owner 2026-11-09: "Just the word", after
   switching Castle S1E2's 22 lines by hand): a line found only by `LINE_WORDS` for sexual
   references or sleeping around (`LIST_WORDS_ONLY`) gets each word it matched muted
   (`list_words_only`, through `word_mute`; "had sex" -> "sex", "having an affair" -> "affair",
   `LIST_WORD_TRIM`) and starts unticked ("tick to mute the whole line"). Lines an AI flagged,
   other dialogue filters (holidays, magic, religion...), learned or hinted lines, and lines
   where a word can't be placed stay whole. CleanListen already mutes these as words.
-- Lauren's Castle S1E5 report (1.18.51, 2026-11-09, adults, the AI helper): "affair" went
+- The owner's Castle S1E5 report (1.18.51, 2026-11-09, adults, the AI helper): "affair" went
   through in four lines. The short list only had "having/had an affair" and "an affair with";
   `LINE_WORDS["casual"]` now also has "the/an/his/her/their/love/secret... affair" (one affair:
   not "Internal Affairs", "none of your affair", "quite an affair", "the affair of ...";
@@ -1430,13 +1430,13 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   kept answer whose description is a bare no (`BARE_NO`) unclear, so it's offered unticked
   (round two: both offered unticked). Fights and blood on Castle/Gummi Bears weren't tried
   on real episodes (their drive wasn't plugged in).
-- Words from CleanListen 1.17.44 (1.18.106, 2026-11-15, Lauren's Camp Club Girls report; the
+- Words from CleanListen 1.17.44 (1.18.106, 2026-11-15, the owner's Camp Club Girls report; the
   same words in every app): "fool" before yourself/me/you/him/anyone/people/of... is fooling
   someone (INNOCENT_NEXT), "play/played dumb" (INNOCENT_PREV), "shut it softly/behind
   him/quietly..." closing a door (NOT_RUDE_NEXT). Kept here and passed to CleanListen: after
   "a"/"the"/"such"/"complete"... (`FOOL_NOUN_PREV`, `fool_called`) "fool" is still calling
   someone a fool, "What a fool you are!", unless "of" follows ("a fool of myself").
-- Lauren's Person of Interest S1E4 report (1.18.105, 2026-11-15, adults, the AI helper, made on
+- The owner's Person of Interest S1E4 report (1.18.105, 2026-11-15, adults, the AI helper, made on
   1.18.104; the owner: "yes 1 and 2. leave for now"). "I'm going home and hitting the hay" was
   heard as "hit in the heck" and "heck" muted, though the subtitles say "hay" at that very
   spot: `sounds_alike` also takes two words of 4 letters or fewer that start with the same
@@ -1455,7 +1455,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   without pictures (`thumbs` []), makes them in a thread with `engine.make_thumbs` and puts
   them on the cards when ready (`_thumb_spots`, `_show_thumbs`), then saves the session.
   Given `work`, the engine still makes them itself (the command line, tests).
-- Lauren's Person of Interest S1E3 report (1.18.104, 2026-11-14, adults, the AI helper, made on
+- The owner's Person of Interest S1E3 report (1.18.104, 2026-11-14, adults, the AI helper, made on
   1.18.102; the owner: "Yes, do both"): the episode was told from "S1 - (3)" (1.18.101), every
   mute right, no scenes (violence off, kisses kept). Four lines went through, now caught:
   "Who's the other woman?" / "Looks like Joey's other woman's got a little girl"
@@ -1474,7 +1474,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   choosing it say "keep" "passonate" "all kisses" arent the 2 redundant", then "yes change"):
   the buttons read "Keep", "Cut passionate", "Cut all kisses" (the values, `level_names`, are
   as before, so saved choices are kept). They weren't redundant: passionate keeps pecks.
-- Lauren's Person of Interest S1E2 report (1.18.102, 2026-11-14, adults, the AI helper, made on
+- The owner's Person of Interest S1E2 report (1.18.102, 2026-11-14, adults, the AI helper, made on
   1.18.100; the owner: "Yes, release it"): every mute right, no scenes; two lines went through.
   "How the hell'd you get in here?": `cl._base` now also takes a joined-on 'd, 'll, 're or 've
   off (`CONTRACTED`; it took only 's), so "hell'd", "hell're", "damn'd" are found ("he'd",
@@ -1486,7 +1486,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   CleanRead and web/words.js too. Her S1E1's 19:10 kiss: the chat's shorter cut (19:10-19:29)
   worked, the original was unticked by it, but her refined file has the original ticked again
   (by hand, it seems: the chat's change held in a test of the same steps).
-- Lauren's Person of Interest S1 report (1.18.101, 2026-11-14, adults, the AI helper, made on
+- The owner's Person of Interest S1 report (1.18.101, 2026-11-14, adults, the AI helper, made on
   1.18.100; passed on by the CleanListen chat): "Person of Interest S1 - (1).wmv" got "No
   subtitles: couldn't tell which episode this is from its name" and was learned under movies.
   `guess_title` now reads the season then the episode in brackets ("S1 - (1)", "S2 (3)",
@@ -1521,7 +1521,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   it's timed for next time. On her laptop's figures the picture scan now ends at about a
   quarter of the bar and the reading is about half of it. The time left needed no change: its
   fallback, the speed the bar moved at, now matches the time too.
-- Lauren's Aladdin report (1.18.98, 2026-11-14, kids, the AI helper, made on 1.18.94; a cartoon,
+- The owner's Aladdin report (1.18.98, 2026-11-14, kids, the AI helper, made on 1.18.94; a cartoon,
   told right). The four "hell"s muted were the Genie saying "Al" ("Al, you won", "Al, you
   little genius", "Al, you're not gonna find another girl", "Me, too, Al"): the subtitles say
   "Al" there, but "hell"/"Al" is under `sounds_alike`'s 0.5 and "Al," starting a sentence
@@ -1559,7 +1559,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   list after "sleeping with his/her..." spells out the plurals (secretaries, wives, bosses,
   exes...), and `test_cleanlisten_words` takes a CleanListen word mute as explained when
   CleanView's `LINE_WORDS` finds words of it in the same sentence (`in_line_list`).
-- Lauren's Castle S2E6 report (1.18.95, 2026-11-14, adults, the AI helper, made on 1.18.92; the
+- The owner's Castle S2E6 report (1.18.95, 2026-11-14, adults, the AI helper, made on 1.18.92; the
   owner: "yes teach", then "how can we improve to catch the first time?" and "1 and 2"). Every
   listed word was muted; six lines that fit her filters went through, now taught for Castle
   (each under its filter): "Daemon fell in love with Crow and his art", "He was Crow's
@@ -1647,7 +1647,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   past reviews here only Gummi Bears' "those blasted bears" is muted. Sent to CleanListen
   (`WAITING_ON_CLEANLISTEN` lists the four test sentences until it has them); web/words.js
   (another chat's uncommitted work) doesn't have it yet.
-- Lauren's Poldark S1E1 report (1.18.92, 2026-11-14, kids, the AI helper, made on 1.18.89; the
+- The owner's Poldark S1E1 report (1.18.92, 2026-11-14, kids, the AI helper, made on 1.18.89; the
   owner: "Yes, check it"). "Poldark S1 Ep. 1.mp4" got "No subtitles: couldn't tell which
   episode this is from its name": `guess_title` knew S01E01, "Season 1 Ep. 3" and "1 - Ep. 1",
   not "S1 Ep. 1", so nothing checked what was heard ("he's very full of himself" was heard as
@@ -1694,7 +1694,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   measured as usual), notes instead of opening files and folders (`support.OPENED`:
   `os.startfile`, explorer, notepad), silences `winsound`, and `support.HIDE` goes first in code
   a test runs in another Python (test_one_window's stand-in windows).
-- Lauren's Selena report (1.18.90, 2026-11-13, adults, the AI helper, made on 1.18.86; the
+- The owner's Selena report (1.18.90, 2026-11-13, adults, the AI helper, made on 1.18.86; the
   movie with "some english and spanish in it", cleaned as English). Every listed word muted;
   the Spanish in its subtitles is a few friendly words ("corazón", "mi hijo", "niña") and its
   Spanish songs aren't subtitled, so the short Spanish list (1.18.86) had nothing to catch and
@@ -1852,7 +1852,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   seconds", "it says updated to version"). The tinted line at the top of the start page after
   an update or "Check for updates" (`CLEANVIEW_UPDATED`; also "CleanView is up to date.") is
   `self.updated_note` and is removed after `UPDATED_SHOWN_SECS` (3).
-- Lauren's Castle S2E1 tests (1.18.84, 2026-11-13, adults, laptop, made on 1.18.78; four
+- The owner's Castle S2E1 tests (1.18.84, 2026-11-13, adults, laptop, made on 1.18.78; four
   "refined" files in the Drive folder: 16:48 with the AI helper off, 17:23 and 17:27 with it
   on, 17:36 the same after asking Claude; she attached the last one and called it "without the
   ai helper"). Off: 5 min, the short list's words only, and a "Condom shown" at 18:21 (the
@@ -2133,7 +2133,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   counts follow every change (variable traces, so changing age or "Reset" updates them). Folded
   by default; the open ones are remembered (`open_sections` in the settings). Same keys, ticks
   and per-age presets as before. `_section_heads` (title -> box, count, tick_all, show) for tests.
-- Lauren's Castle S2E5 report (1.18.73, 2026-11-12, adults, the AI helper, made on 1.18.70; the
+- The owner's Castle S2E5 report (1.18.73, 2026-11-12, adults, the AI helper, made on 1.18.70; the
   owner: "Yes, teach them"): 41 min on her laptop against S2E3's 48 (each conversation 18.0 ->
   12.9 min with 1.18.68's quick question; reading the dialogue 14.4 -> 15.2 with 1.18.70's
   sexual-talk check). The scan record shows `picture_runtime` 1.24.4, but the laptop's picture
@@ -2197,7 +2197,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   Asking it per conversation with no line-by-line look caught 7 of the 13 but flagged 30
   innocent lines. Cost: about 2.5 min an episode with the model 61% on the card (laptop-like
   here), 0.3-1 min on the full card.
-- Lauren's Castle S2E3 report (1.18.69, 2026-11-12, adults, the AI helper, made on 1.18.67;
+- The owner's Castle S2E3 report (1.18.69, 2026-11-12, adults, the AI helper, made on 1.18.67;
   laptop: 48 min, reading 14.4 and each conversation 18.0): every listed word muted, nothing
   marked Drugs, but the AI helper flagged almost none of the episode's sexual talk. The owner:
   "do both but leave coroners talk". Taught for Castle (sexref, a "CleanView reviewed" file
@@ -2274,7 +2274,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   that question also loads it). A Castle episode's AI part would take about 45 minutes there
   instead of 8; The Resident (100+ closer looks) 2-3 hours. Turning the AI helper off is the
   quick way on such a PC.
-- One CleanView at a time, with an "Opening CleanView..." box (1.18.64, 2026-11-12; Lauren:
+- One CleanView at a time, with an "Opening CleanView..." box (1.18.64, 2026-11-12; the owner:
   "it can take several second and gives no indication it is opening. so i click again and get
   multiple windows open. I only want there to be a single instance", "The program can take
   time to open if it needs, but give an indicator box it is opening"). `launcher.pyw` is now
@@ -2321,7 +2321,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   `PIC_RULES` says blood in a medical setting is medical, never graphic or gore (a crime scene
   with medics there isn't). Passed to CleanListen and CleanRead as a passage filter (graphic
   medical descriptions).
-- Lauren's Castle S2E1 report (1.18.61, 2026-11-12, adults, the AI helper, on 1.18.60): two
+- The owner's Castle S2E1 report (1.18.61, 2026-11-12, adults, the AI helper, on 1.18.60): two
   wrong flags. "That's a long way to go for a robbery." was muted as the lesson "...for a lube
   job" (8 words shared, `LearnedLines._overlap`), but the joke is in the words that differ: a
   shared stretch no longer counts when both lines go on past it with other words at the same
@@ -2334,7 +2334,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   (`flirt_scenes`, `VOICES_MIXED`). Her other unticks were hers: the morgue body with its
   organs out (gore), and "fuck" heard in the Russian mobsters' scene (no subtitles there).
   On her laptop the AI helper's reading took 27 of the 40 minutes (63% of qwen3:8b on its card).
-- A badly numbered episode still gets its subtitles (1.18.59, 2026-11-11). Lauren's "Castle
+- A badly numbered episode still gets its subtitles (1.18.59, 2026-11-11). The owner's "Castle
   Season 1 - Ep. 3.mp4" is really S01E04 "Hell Hath No Fury" (the councilman and Tiffany), so
   episode 3's subtitles lined up 4% and none were used (her adults report: no subtitles, the
   learned Castle lines carried it). The owner: "yes. also build in if it is say season 2
@@ -2359,7 +2359,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   "The AI helper took a closer look at 12 scene(s): 3 kept, 9 dropped.", "Took 14 min:
   listening 1.8, picture scan 4.3, ... (minutes)." (`took_note`, last). "Send what we
   refined" carries `scan` for each video (None for reviews made before).
-- A newer AI model that wouldn't download is tried again (1.18.57, 2026-11-11): on Lauren's
+- A newer AI model that wouldn't download is tried again (1.18.57, 2026-11-11): on the owner's
   laptop the new picture model's download (6.2 GB) failed on 1.18.56's first try, CleanView
   rightly went on with the old model, but the mark (`_upgrade_mark`) said "tried" and it would
   never try again. Now it says "done" or "failed N" (`_note_upgrade`, `_upgrade_tries`; the old
@@ -2372,7 +2372,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   through each question first (200-1,000 tokens for a ~60-word answer), ~16 s a look on this PC,
   and the same question runs away the same way every time, so `recheck_failed` couldn't save
   those. Side by side on 183 scenes from 46 past videos (The Resident, Person of Interest),
-  Lauren's adult settings: instruct ~7 s a look, none failed; thinking 11 failed at the
+  the owner's adult settings: instruct ~7 s a look, none failed; thinking 11 failed at the
   4-minute limit (9 of 29 kisses). Instruct was right on all 4 drug disagreements (a drip, a
   blood draw, an injection are not "illegal drugs"), even on kisses, the same on gestures,
   mixed on nudity (it calls a shirtless patient "implied"). On gore it answered "blood" even
@@ -2398,7 +2398,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   Save errors shorten ffmpeg's long quoted expressions (`_short_error`), so its reason shows.
 - Nothing heavy runs beside the AI helper (1.18.54, 2026-11-10; the owner: "lets get back to
   effieciency", "All four", then "Yes, trim and test"). Whole cleans timed on this PC (16
-  threads, 8 GB RTX 5070), Lauren's settings: Castle S1E2 12.5 min (picture scan 4.3, the AI
+  threads, 8 GB RTX 5070), the owner's settings: Castle S1E2 12.5 min (picture scan 4.3, the AI
   helper's reading 3.5, listening 1.8, voices 1.3, closer look 1); The Resident S03E12 24 min,
   16 of them the closer look (~150 scenes). The AI helper (Ollama; its models are only partly
   on the graphics card) slows down badly whenever the processor is busy, so running things
@@ -2415,7 +2415,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   speaker numbers are the same every run (`line_voices` split a man/woman tie by a set's
   random order: `min(sorted(kinds), ...)`). Every line, mute, scene and note came out the
   same as before in all the runs. The closer look itself is now the slowest step.
-- A save that stops moving is stopped and tried another way (1.18.53, 2026-11-10; Lauren, on
+- A save that stops moving is stopped and tried another way (1.18.53, 2026-11-10; the owner, on
   her MSI laptop: Castle S1E2 "(Clean)", a clean copy cleaned again after the update, got stuck
   saving several times and nothing said why; "Yes, add it"). Re-saving clean copies here worked
   every way tried (mutes only, with and without subtitles), so the cause is on that laptop.
@@ -2547,7 +2547,7 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   1–25 of 928) and its double-check, each conversation, the cloud's stills (20 per sheet),
   scene checks and scene edges; `in_background`/`wait_for` pass the count on. The cloud's
   dialogue reading and final review are one or two big requests, so they have no count.
-- Built-in lessons for an older age count for younger ones (1.18.43, Lauren's Castle S1E3,
+- Built-in lessons for an older age count for younger ones (1.18.43, the owner's Castle S1E3,
   2026-11-09, teens with the local AI: all 191 of the show's lessons were under "castle",
   learned from adults' reports, and a teens run looked only under "castle@teens", so none were
   used and 21 of the episode's lines went through). `learn._age_keys(key, older=True)`: a
@@ -2571,14 +2571,14 @@ share ideas and some code lineage (`cvcore.py` started as CleanListen's core).
   again its lines go in `unread` and the AI on this PC reads just those (`find_lines`), the
   rest of Claude's reading is kept, and the report says which parts. The first two parts
   both failing still means it isn't working: the error is raised as before.
-- Ollama only while CleanView, CleanListen or CleanRead are open (Lauren, 2026-11-05; it held
+- Ollama only while CleanView, CleanListen or CleanRead are open (the owner, 2026-11-05; it held
   ~4 GB all day): `ollama_care.py` is CleanListen's (1.15.2), with `videoqueue.py` added to
   `CLEAN_APPS`; keep the two copies the same. The installed copy (`_installed_copy`) calls
   `autostart_off()` on every opening (removes `Startup\Ollama.lnk`, which Ollama's updates put
   back) and `stop_later()` after `mainloop()` (a detached helper stops Ollama once no app or
   worker is running and no model is loaded; if it can't tell, Ollama is left alone).
   `launcher.pyw` falls back to `BookWorm824/cleanview` when `update.json` is missing or broken.
-- A freeze or a crash is written down (Jason, 2026-11-03: it stopped responding during a
+- A freeze or a crash is written down (the tester, 2026-11-03: it stopped responding during a
   movie and didn't say why). If the window doesn't answer for 20 s (`STALL_SECS`), what
   every thread was doing, the step and memory go in `stopped_last_time.txt`; a hard crash
   is caught by faulthandler (`crash_log.txt`). Next start she's asked whether to send it
@@ -2664,11 +2664,11 @@ Run from the repo folder with the app's own Python (it has the packages the app 
 - `test_freeze.py`: the freeze and crash notes, sending one in, and `_poll` under a flood.
 - `test_reports_nov.py`: lessons from the November reports (long prompts through stdin,
   sound-only and talk-only scenes, misheard swears, names in the subtitles, a bare "God!").
-- `test_reports_nov6.py`: Jason's word-only after an old keep, remembered scenes' wording,
+- `test_reports_nov6.py`: the tester's word-only after an old keep, remembered scenes' wording,
   one moan offered, the Resident S3 lessons and the drug store note built in.
 - `test_title_big.py`: the progress page's title is the name without the extension, big
   and bold.
-- `test_jason_nov7.py`: the findings spreadsheet for just this video, newest first, and
+- `test_tester_nov7.py`: the findings spreadsheet for just this video, newest first, and
   the logo on the progress page.
 - `test_save_fails.py`: the careful last try, plain reasons from ffmpeg's errors, and
   offering to send in what went wrong.
@@ -2901,7 +2901,7 @@ Run from the repo folder with the app's own Python (it has the packages the app 
   out of the time left, and Cancel/closing/the workers resuming first.
 - `test_slow_pc.py`: questions to the AI helper get 3 times as long when its model isn't
   mostly on the graphics card (or isn't loaded yet), the usual limit when it is (50% counts, as
-  on Lauren's laptop), each model on its own, and no Ollama to ask counts as slow.
+  on the owner's laptop), each model on its own, and no Ollama to ask counts as slow.
 - `test_one_window.py`: the lock (held elsewhere, waited for, held twice by the same
   process), finding a window one process down, what a click does (open, opening, not open,
   Update now, couldn't start apart), the app part (another won; Update now waits longer), and
@@ -2922,7 +2922,7 @@ Run from the repo folder with the app's own Python (it has the packages the app 
   errors; ffmpeg's "Cannot allocate memory" for a filter not said as running out of memory.
 - `test_shawshank.py`: doors, slams, a typewriter and sobbing heard more clearly than
   gunfire aren't gunfire; real gunshots and screams still count; older scans as before.
-- `test_gunshots.py`: real gunshot sounds Lauren sent (the tagger's scores in
+- `test_gunshots.py`: real gunshot sounds the owner sent (the tagger's scores in
   `gunshot_sounds.json`, also with noise under them) stay cut as violence, and the G.I. Joe
   clips (`gunfire_clips.json`) are cut from the first shots to the last. Two she sent
   ("cap gun", "chop") aren't found by sound: counting those labels or matching against
@@ -3036,8 +3036,8 @@ Run from the repo folder with the app's own Python (it has the packages the app 
    hits, dark frames ignored), then the local vision model double-checks each scene. With
    Claude/ChatGPT/Gemini it does that in the background while they read the dialogue
    (`closer_looks`, `in_background`/`wait_for`), so both AIs look but it doesn't take
-   twice as long (Lauren 2026-10-29; one after the other looked like the same slow step
-   twice to Jason). The local text model isn't used then, so the two never share the GPU.
+   twice as long (the owner 2026-10-29; one after the other looked like the same slow step
+   twice to the tester). The local text model isn't used then, so the two never share the GPU.
 5. **Voices**: speaker separation and a man/woman/child guess for each line.
 6. **Dialogue filters** (sexual references, sleeping around, same-sex relationships and
    flirting, crude humor, bullying, religious conversations, rude words...): read by the
@@ -3066,10 +3066,10 @@ Run from the repo folder with the app's own Python (it has the packages the app 
 - Language groups: swearing, mild, God's name, minced oaths, same-sex words, rude words kids
   copy (stupid, dumb, idiot, shut up, "that sucks"...). "screw you" and "crap" count as
   language. "Suck" meaning "is bad" counts wherever it's said (`cvcore.suck_swear`,
-  Lauren 2026-10-29); sucking something (a lollipop, a thumb, "suck it up") doesn't.
+  the owner 2026-10-29); sucking something (a lollipop, a thumb, "suck it up") doesn't.
 - "Jesus" and "Christ" said with reverence aren't muted as swears ("the love of Christ",
   "Jesus told us", "the gospel of Jesus Christ"); oaths still are ("Jesus!", "Christ, that
-  hurt", "oh my Jesus"): `cvcore.reverent` (Lauren, from Jason's report on At Every Turn;
+  hurt", "oh my Jesus"): `cvcore.reverent` (the owner, from the tester's report on At Every Turn;
   the same rule in CleanListen 1.10.0).
 - "What the" / "who the" / "what in the" just before a muted word is muted with it
   ("what the hell" goes whole; `cvcore.with_lead_in`), since it says what the word was.
@@ -3087,9 +3087,9 @@ Run from the repo folder with the app's own Python (it has the packages the app 
   slapstick); Graphic (blood and wounds, crime-scene bodies with blood); Gore (insides on the
   outside); Disturbing (violence outside combat: torture, execution, cruelty to the helpless).
   Crime scenes are Graphic, not Gore. Blood and injuries from an accident (a car crash, a
-  fall) are Disturbing, never Violence or Graphic (Lauren 2026-10-30, The Blind Side). A
+  fall) are Disturbing, never Violence or Graphic (the owner 2026-10-30, The Blind Side). A
   killing that happens off screen but is clearly heard (Bambi's mother) is Violence.
-- Sex drugs are sexual references (Lauren, 2026-11-04): Viagra, Cialis, "the little blue
+- Sex drugs are sexual references (the owner, 2026-11-04): Viagra, Cialis, "the little blue
   pill", erectile dysfunction, aphrodisiacs ("Spanish fly"), drugging someone for sex. In the
   word list (`LINE_WORDS["sexref"]`, only hard-to-mistake names) and in both readers'
   descriptions (`cleanview_claude.TYPE_TEXT`, `cleanview_ai.LINE_TYPES`).
@@ -3097,17 +3097,17 @@ Run from the repo folder with the app's own Python (it has the packages the app 
 - Kissing: man & woman and same-sex, each keep / cut passionate / cut all.
 - When one word is the only problem in a line, mute just the word, not the whole line. But
   jokes or innuendo mean the whole line goes.
-- Holidays and birthdays: one "Holidays" tick box (option `holidays`, Lauren 2026-10-29)
+- Holidays and birthdays: one "Holidays" tick box (option `holidays`, the owner 2026-10-29)
   for Christmas, Halloween, Valentine's Day, Easter and St. Patrick's Day: `full_opts()`
   turns on each of `cleanview.HOLIDAYS`, which stay separate kinds inside (labels, AI
   definitions, picture categories). Old saved per-holiday ticks become the one box
   (`one_holidays_box` in CleanView.pyw). Thanksgiving is fine. Candles on a birthday cake
   are their own box. Ticked for Young kids and Kids, not Teens or Adults.
-  For birthdays only the candles count (Lauren, 2026-10-29: parties, cake and "happy
+  For birthdays only the candles count (the owner, 2026-10-29: parties, cake and "happy
   birthday" are fine), so it's just the candle lines, not whole conversations. The "Magic"
   section ("Magic and monsters") works the same way: Dark magic (witchcraft, wizards and
   witches doing magic, curses, the occult, seances, fortune telling; wizards are dark magic,
-  Lauren 2026-10-29), Magic (spells, wands, potions, fairies; not stage tricks) and
+  the owner 2026-10-29), Magic (spells, wands, potions, fairies; not stage tricks) and
   Vampires and werewolves (`vampires`; not vampire bats or ordinary wolves), `MAGIC` in
   cleanview.py and CleanView.pyw, also ticked for Young kids and Kids only.
   Each is both a dialogue filter (whole conversations, whole lines) and a picture category
@@ -3119,7 +3119,7 @@ Run from the repo folder with the app's own Python (it has the packages the app 
   prayer, church, the Bible or any religion, including sincere prayer; whole conversations
   (`fill_conversations` joins lines found close together) and always whole lines
   (`WHOLE_LINE_TYPES`). God's name said as a swear stays the separate "deity" word group.
-- Disrespect (`disrespect`, Lauren 2026-10-30): kids being bratty, talking back to, mocking
+- Disrespect (`disrespect`, the owner 2026-10-30): kids being bratty, talking back to, mocking
   or disobeying their parents and other grown-ups. A dialogue filter (whole lines, not
   whole conversations), ticked for Young kids, Kids and Teens. It's still flagged when the
   child learns their lesson later, but Claude/ChatGPT/Gemini say so in the line's "why"
@@ -3155,7 +3155,7 @@ Run from the repo folder with the app's own Python (it has the packages the app 
   download: Julie & Julia's stopped at 0:59 of 2 hours) are filled in from what was heard
   (`cleanview_ai.dialogue_lines`, `SUBTITLE_GAP`; lines marked `heard`), with a note in the
   review. Before, nothing said after that was read, and the chat couldn't see it.
-- Scene cuts are as short as the trouble (Lauren 2026-11-03: "a shorter cut for all found
+- Scene cuts are as short as the trouble (the owner 2026-11-03: "a shorter cut for all found
   scenes in general... that way you can tell more what is happening"; a 6½-minute cut of
   The Little Mermaid's ending). The bounds sheet now asks for the parts where the trouble
   is on screen (`scene_bounds` returns parts) and `refine_bounds` can shrink a cut or split
@@ -3174,7 +3174,7 @@ Run from the repo folder with the app's own Python (it has the packages the app 
   Dickens. From the CleanRead reports, the same in every app: "Camp Dick" (a WWI army
   camp), "a tiny prick of black", "a strip of sod", "God knows best" and "Lord, help me to
   trust" (a prayer) aren't swears (`INNOCENT_PREV`, `KNOWS_NOT_OATH`, `HELP_NOT_OATH`).
-  Prayers Lauren kept in Wings of a Dream (2026-11-04) aren't oaths either (`prayer()`):
+  Prayers the owner kept in Wings of a Dream (2026-11-04) aren't oaths either (`prayer()`):
   "Oh God. Help me know what to do", "Please, please, dear Jesus", "Had I let Jesus
   illuminate my path", "that I call You my God" / "You are my God", "Please, dear God".
   "Oh Lord Jesus." she left marked, and "Oh God, help me, I'm going to be sick" or "Look at
@@ -3223,7 +3223,7 @@ These are where results have been wrong in real use. Improvements here matter mo
 8. **CleanListen parity.** Features added here (age profiles, rude words, word-only mutes,
    live chat edits, exports) are wanted in CleanListen too.
 
-## Words and filters in every app (Lauren's rule, 2026-10-28)
+## Words and filters in every app (the owner's rule, 2026-10-28)
 
 Every change to words, phrases, guards or filters goes into all three apps: CleanView
 (this repo, `cvcore.py` + `web/words.js`), CleanListen and CleanRead (both in
@@ -3241,7 +3241,11 @@ too: a filter added here is wanted in CleanListen and CleanRead.
 
 1. Make the change, run the tests, bump `version` in `version.json` (and add any new file to
    `"files"`).
-2. Commit as `BookWorm824 <morganscorner93@gmail.com>` and push to `main`. Installed copies
+2. Commit as `BookWorm824 <166928895+BookWorm824@users.noreply.github.com>` and push to `main`. Installed copies
    pick it up within a few minutes (the raw GitHub CDN can lag ~5 minutes).
-3. Tell Lauren in one or two plain sentences what changed and to press F5 / "Update now".
+3. Tell the owner in one or two plain sentences what changed and to press F5 / "Update now".
 4. The installer zip is only rebuilt for new installs (e.g. for her sister).
+5. No one's name or email goes in the files: the code is public (installed copies update from
+   it). Write "the owner" and "the tester"; commits use the GitHub no-reply address above
+   (1.18.146, 2026-11-19; the owner: "check and delete our name to owner test and change the
+   git hub": 161 first names, 82 of the tester's and the owner's email were in 75 files).

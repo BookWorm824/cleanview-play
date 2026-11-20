@@ -190,7 +190,7 @@ _base_scaling = None
 
 def chime():
     """The Windows "information" sound, so a question is heard like the other boxes
-    (a question box is silent on Windows; Jason missed the "Send it in now?" one)."""
+    (a question box is silent on Windows; the tester missed the "Send it in now?" one)."""
     try:
         import winsound
         winsound.MessageBeep(winsound.MB_ICONASTERISK)
@@ -458,7 +458,7 @@ def plain_error(ex):
     return VQ.plain_error(ex)        # (the workers say it the same way)
 
 
-# Noticing a freeze (Jason, 2026-11-03: CleanView stopped responding during a movie and
+# Noticing a freeze (the tester, 2026-11-03: CleanView stopped responding during a movie and
 # didn't say why). If the window doesn't answer for STALL_SECS, what every part of
 # CleanView was doing is written to PROBLEM_NOTE; a hard crash is written by faulthandler
 # to CRASH_LOG. Next time she's asked whether to send it in (_offer_problem_note).
@@ -1387,7 +1387,7 @@ class App(tk.Tk):
         self.footer = tk.Frame(self.page, bg=BG)
         self.footer.pack(side="bottom", fill="x", pady=(X(10), 0))
         tk.Frame(self.footer, bg=LINE, height=1).pack(side="top", fill="x", pady=(0, X(12)))
-        if name:                # which video this is (Jason: "you don't know what you've cleaned")
+        if name:                # which video this is (the tester: "you don't know what you've cleaned")
             tk.Label(self.page, text=name, bg=BG, fg=ACCENT, font=(HEAD, 11),
                      wraplength=wrap_width(860), justify="left").pack(anchor="w", pady=(0, X(2)))
         tk.Label(self.page, text=title, bg=BG, fg=INK, font=(HEAD, 21)).pack(anchor="w")
@@ -2497,7 +2497,7 @@ class App(tk.Tk):
         """Tk sizes text as each part of the window is built, so build the start page
         again at the new size, keeping it as it was (the videos chosen and every tick).
         It used to restart CleanView, which closed the window for a while on a slow PC
-        and looked like it had shut down (Jason)."""
+        and looked like it had shut down (the tester)."""
         if name == self.text_size or name not in TEXT_SIZES:
             return
         self.text_size = name
@@ -2829,7 +2829,7 @@ class App(tk.Tk):
         self.status.pack(anchor="w", pady=(14, 0))
         self.overall = tk.Label(box, text="", bg=CARD, fg=ACCENT, font=(HEAD, 11))
         self.overall.pack(anchor="w", pady=(4, 0))
-        if n == 1:                      # the logo in the empty space (Jason, 2026-11-07)
+        if n == 1:                      # the logo in the empty space (the tester, 2026-11-07)
             back = logo_backdrop(WORKING_LOGO)
             if back is not None:
                 mid = tk.Frame(p, bg=BG)
@@ -3637,7 +3637,7 @@ class App(tk.Tk):
         threading.Thread(target=go, daemon=True).start()
 
     def _tell_save_failed(self, text):
-        """Say what couldn't be saved, and offer to send in what went wrong (Jason,
+        """Say what couldn't be saved, and offer to send in what went wrong (the tester,
         2026-11-07: Snow White failed four times at about the same spot, and nobody
         could see why)."""
         details = "\n\n----------\n\n".join(getattr(self, "_save_failures", []))
@@ -3704,7 +3704,7 @@ class App(tk.Tk):
         r = self._cloud() if hasattr(self, "opts") else None
         if r:
             return r
-        # (Jason, 2026-11-04: with the AI on this PC reading the dialogue there was no chat,
+        # (the tester, 2026-11-04: with the AI on this PC reading the dialogue there was no chat,
         # so he couldn't tell it what it got wrong) any one that's set up will do
         state = getattr(self, "ai_state", {})
         for p in cc.NAMES:
@@ -3918,11 +3918,11 @@ class App(tk.Tk):
         self.play_lbl = tk.Label(where, text=PLAY_SAID_MULTI if multi else PLAY_SAID,
                                  bg=BG, fg=MUTED, font=(FONT, 9), justify="right", anchor="e")
         self.play_lbl.pack(side="right", padx=(0, self._px(10)))
-        # back to the start page without saving (Jason: just checking what's in it);
+        # back to the start page without saving (the tester: just checking what's in it);
         # the review is kept, so "Pick up where I left off" opens it again
         ttk.Button(self.footer, text="\u25c0 Back to start", style="Plain.TButton",
                    command=self._back_to_start).pack(side="left", padx=(0, 8))
-        # what was refined, sent in before saving too (Lauren): the ticks as they are now
+        # what was refined, sent in before saving too (the owner): the ticks as they are now
         ttk.Button(self.footer, text="Send what we refined…", style="Plain.TButton",
                    command=self._send_report_now).pack(side="left")
 
@@ -4044,7 +4044,7 @@ class App(tk.Tk):
             engine.PAUSE.resume()          # frozen helpers couldn't stop
             self.run = getattr(self, "run", 0) + 1     # the rest stop at their next check
             self._scan_run = None
-        self._learn_choices()           # learned without saving a copy too (Jason)
+        self._learn_choices()           # learned without saving a copy too (the tester)
         self._save_session()
         self.reset()
 
@@ -4365,7 +4365,7 @@ class App(tk.Tk):
 
     def _open_findings(self):
         """A spreadsheet of what Claude, ChatGPT or Gemini found in the videos on this review
-        page only (Jason, 2026-11-07: it had every movie he'd done, not the one he was on).
+        page only (the tester, 2026-11-07: it had every movie he'd done, not the one he was on).
         The one with every video is still claude_findings.csv in CleanView's folder."""
         vids = [j["video"] for j in self.jobs if j.get("analysis")]
         if not learn.findings_rows(vids):
@@ -4736,7 +4736,7 @@ class App(tk.Tk):
             return
         self._log(f"{AI_NAME}: " + reply)
         st = job["analysis"]
-        for note, everywhere in acts.get("remember", []):   # kept for later checks (Jason)
+        for note, everywhere in acts.get("remember", []):   # kept for later checks (the tester)
             if learn.add_note(st.get("show", "_movies"), note,
                               engine.title_name(st.get("path")), everywhere):
                 self._log("\u2713 CleanView will remember" +
@@ -5704,7 +5704,7 @@ def _installed_copy():
 
 def _ollama_care(what):
     """Ollama (the AI on this PC) only while CleanView, CleanListen or CleanRead are open
-    (Lauren, 2026-11-05): not started with Windows, and stopped once they've all closed. The
+    (the owner, 2026-11-05): not started with Windows, and stopped once they've all closed. The
     installed copy only, so a test copy never changes the PC."""
     try:
         import ollama_care
