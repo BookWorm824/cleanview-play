@@ -386,10 +386,117 @@ def _load_log(views, view, path):
     return None
 
 
+# ---------- the log beside the movie (1.0.68) ----------
+# The owner, 2026-11-21: "want to put my movie on a usb to watch at a friends house and they
+# also have cleanview play. does the log go with the movie?", then yes to saving it next to
+# the movie. "<movie name>.cleanview" in the movie's own folder: copy both and the friend's
+# CleanView Play finds it and offers to play it clean, with no scan. It's only used for the
+# very same file (its fingerprint), and holds no path from this PC (only the file's name).
+BESIDE_EXT = ".cleanview"
+BESIDE_WHAT = "CleanView Play log"
+BESIDE_FORMAT = 1
+BESIDE_LEAVE_OUT = ("asr", "voices", "_view")     # not needed to play it (and the biggest)
+
+
+def beside_path(video):
+    return Path(video).with_suffix(BESIDE_EXT)
+
+
+def _for_beside(st):
+    out = {k: v for k, v in st.items() if k not in BESIDE_LEAVE_OUT}
+    name = Path(str(st.get("path") or "")).name
+    out["path"] = name
+    if isinstance(out.get("info"), dict) and "path" in out["info"]:
+        out["info"] = dict(out["info"], path=name)
+    return out
+
+
+def write_beside(st, fp=None):
+    """Save this review next to its video. Quietly does nothing if it can't (the video gone,
+    a drive that can't be written to). True when the file there is now this review."""
+    video = st.get("path")
+    if not video or not st.get("duration"):
+        return False
+    tmp = None
+    try:
+        fp = fp or fingerprint(video)
+        want = json.dumps({"what": BESIDE_WHAT, "format": BESIDE_FORMAT, "fingerprint": fp,
+                           "title": Path(video).stem, "analysis": _for_beside(st)})
+        out = beside_path(video)
+        try:
+            if out.read_text(encoding="utf8") == want:
+                return True             # the same already: a USB stick isn't written again
+        except OSError:
+            pass
+        tmp = out.with_name(out.name + ".tmp")
+        tmp.write_text(want, encoding="utf8")
+        os.replace(tmp, out)
+        return True
+    except (OSError, TypeError, ValueError):
+        if tmp:
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+        return False
+
+
+BESIDE_LOOK_AT = 50          # other logs in the folder looked at (a renamed movie or log)
+
+
+def read_beside(video, fp=None):
+    """The review saved next to this video, if there is one for this very file (else None):
+    its own "<name>.cleanview", else any log in the folder made for this very file (one of
+    the two was renamed)."""
+    try:
+        fp = fp or fingerprint(video)
+    except OSError:
+        return None
+    own = beside_path(video)
+    try:
+        others = sorted(p for p in own.parent.glob("*" + BESIDE_EXT) if p != own)
+    except OSError:
+        others = []
+    for log in [own] + others[:BESIDE_LOOK_AT]:
+        try:
+            d = json.loads(log.read_text(encoding="utf8"))
+        except (OSError, ValueError):
+            continue
+        if isinstance(d, dict) and d.get("what") == BESIDE_WHAT and d.get("fingerprint") == fp:
+            break
+    else:
+        return None
+    st = d.get("analysis")
+    if not isinstance(st, dict) or not st.get("duration"):
+        return None
+    st["path"] = str(video)
+    if isinstance(st.get("info"), dict):
+        st["info"]["path"] = str(video)
+    return st
+
+
+def take_beside(video, views=None, fp=None):
+    """Use the log beside this video here: kept as this PC's own (views/<key>, on the Cleaned
+    before list), so it's found again even if the log file is later left behind."""
+    views = Path(views or APP_DATA / "views")
+    st = read_beside(video, fp)
+    if not st:
+        return None
+    try:
+        view = engine_key(str(video))
+        (views / view).mkdir(parents=True, exist_ok=True)
+        (views / view / "analysis.json").write_text(json.dumps(st, indent=1), encoding="utf8")
+        remember(st, view, views.parent, fp)
+    except (OSError, TypeError, ValueError):
+        return st                       # can't keep it: still plays clean this time
+    return _load_log(views, view, video) or st
+
+
 def cleaned_before(path, views=None):
     """The checked review of this video, if it was cleaned here before (else None): found by
     the file's fingerprint, wherever it is now; else, for a log not on the list yet, by its
-    path (written in any of the ways the file picker and Explorer write it)."""
+    path (written in any of the ways the file picker and Explorer write it); else the log
+    saved next to it (`take_beside`: cleaned on another PC, brought on a USB stick)."""
     views = Path(views or APP_DATA / "views")
     p = str(path)
     try:
@@ -414,6 +521,8 @@ def cleaned_before(path, views=None):
             if fp:
                 remember(st, view, views.parent, fp)
             return st
+    if fp:
+        return take_beside(p, views, fp)
     return None
 
 

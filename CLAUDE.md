@@ -172,6 +172,21 @@ touch", then "keeping clean view as a save program only add a play now feature f
   saying "Looking for “title”…", `find_again` runs in the "watch" thread, then "Opening…"; not
   found → the window closes and it asks "Is its drive plugged in? Find it yourself?" → a chosen
   file goes through `watch_files(expect=fingerprint)` ("That's a different video...").
+- The log goes with the movie (1.0.68; the owner, 2026-11-21: "want to put my movie on a usb
+  to watch at a friends house and they also have cleanview play. does the log go with the
+  movie?", then "yes" to saving it next to the movie). `_remember_cleaned` (from
+  `_write_session`, in its background thread) also writes `cvplay.write_beside`: "<movie
+  name>.cleanview" in the movie's own folder, {"what": "CleanView Play log", "format", the
+  movie's `fingerprint`, "title", "analysis"}; the analysis without `BESIDE_LEAVE_OUT` (asr,
+  voices: not needed to play, the biggest) and with only the file's name for `path` and
+  `info.path` (no path from her PC). Not written again when it's the same (a USB stick). A
+  drive it can't write to is passed over quietly. `cleaned_before` tries it last (this PC's
+  own log first): `read_beside` takes the movie's own "<name>.cleanview", else any log in the
+  folder for this very file (up to `BESIDE_LOOK_AT`, so a renamed movie or log still works),
+  never another file's; `take_beside` keeps it as this PC's own (`views/<engine_key>`, on the
+  Cleaned before list), so it's found again without the file. So on a friend's PC "Just want to
+  watch?", Open with, or Cleaned before plays it clean with her ticks, no scan. Changing the
+  ticks there still needs their own scan (Start cleaning scans afresh). `test_play_beside.py`.
 - The review page: "▶ Play now" instead of "Save clean copy"; the save folder / size row
   is gone; the review stays open (change a tick, play again) and is saved for "Pick up
   where I left off". `_gather_choices()` is the old first half of `_save_from_review()`.

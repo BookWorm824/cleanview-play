@@ -5457,13 +5457,20 @@ class App(tk.Tk):
         known = cvplay.known_views(APP_DATA)
         todo = [(dict(j["analysis"]), Path(j["work"]).name) for j in good
                 if j.get("analysis") and Path(j["work"]).name not in known]
-        if not todo:
+        # and the log next to each video, so it goes with the movie to another PC (1.0.68)
+        beside = [dict(j["analysis"]) for j in good if j.get("analysis")]
+        if not todo and not beside:
             return
 
         def go():
             for st, view in todo:
                 try:
                     cvplay.remember(st, view, APP_DATA)
+                except Exception:
+                    pass
+            for st in beside:
+                try:
+                    cvplay.write_beside(st)
                 except Exception:
                     pass
         threading.Thread(target=go, daemon=True, name="remember cleaned").start()
