@@ -187,6 +187,21 @@ touch", then "keeping clean view as a save program only add a play now feature f
   Cleaned before list), so it's found again without the file. So on a friend's PC "Just want to
   watch?", Open with, or Cleaned before plays it clean with her ticks, no scan. Changing the
   ticks there still needs their own scan (Start cleaning scans afresh). `test_play_beside.py`.
+- Shown as "CleanView" (1.0.71; the owner, 2026-11-21: "wekk the shortcut and anything people can
+  read should change to cleanview also", "functtionally file wise it can be clean view play",
+  then "Everywhere readable"; CleanView itself shows "CleanView Save" from 1.18.157). Every
+  message, box title, label, note, report heading and window title says "CleanView"
+  (`SHOWN_NAME`, launcher `SHOWN`, `cvopenwith.SHOWN` for "Open with", mpv's title, the
+  installer's text). Kept "CleanView Play": `APP_NAME` (the folder, `CleanView Play.exe`, the
+  update seal and key), `APP_DATA` everywhere, the problem files' names and their "app", the
+  inbox's "from", `BESIDE_WHAT` (other PCs read it), the User-Agent, `TASKBAR_ID`. The shortcut:
+  `launcher.name_shortcuts` renames this install's "CleanView Play.lnk" (desktop and Start menu,
+  only one that starts this folder's launcher.pyw) to "CleanView.lnk" where that's free or is
+  its own; where CleanView's own "CleanView.lnk" is still there it waits (prints WAIT, nothing
+  noted) and tries next time, so the two never overwrite each other. The installer makes
+  "CleanView.lnk" the same way, else "CleanView Play.lnk". The launcher finds its window by
+  "CleanView" alone or with a version after it (`windows_of`), never "CleanView Save ...".
+  The opening box reads "Updated to version X" from either name. `test_save_name.py` (Play's).
 - The review page: "▶ Play now" instead of "Save clean copy"; the save folder / size row
   is gone; the review stays open (change a tick, play again) and is saved for "Pick up
   where I left off". `_gather_choices()` is the old first half of `_save_from_review()`.

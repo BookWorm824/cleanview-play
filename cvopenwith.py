@@ -22,6 +22,7 @@ import cvplay
 
 HERE = Path(__file__).resolve().parent
 APP_NAME = "CleanView Play"
+SHOWN = "CleanView"       # what File Explorer shows (1.0.71: Play is shown as "CleanView")
 PROGID = "CleanViewPlay.Media"
 KINDS = cvplay.VIDEO_TYPES + cvplay.AUDIO_TYPES
 
@@ -77,10 +78,10 @@ def register(here=HERE, reg=None):
         cmd = command(root)
         icon = str(icon_file(root / "app"))
         base = r"Software\Classes"
-        want = {(PROGID, ""): f"{APP_NAME} video",
-                (PROGID, "FriendlyTypeName"): f"{APP_NAME} video",
+        want = {(PROGID, ""): f"{SHOWN} video",
+                (PROGID, "FriendlyTypeName"): f"{SHOWN} video",
                 (PROGID + r"\DefaultIcon", ""): icon,
-                (PROGID + r"\shell\open", "FriendlyAppName"): APP_NAME,
+                (PROGID + r"\shell\open", "FriendlyAppName"): SHOWN,
                 (PROGID + r"\shell\open\command", ""): cmd}
         changed = False
         for (key, name), value in want.items():

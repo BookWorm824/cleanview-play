@@ -491,7 +491,7 @@ def apply(key, dialogue, line_flags, scenes, mutes, label_learned="learned", on=
         elif n in hint_kept:
             l["mute"] = False
             l["hint"] = ("Claude said this was fine before" if n in d["claude_kept"] else
-                         "CleanView Play learned this is fine")
+                         "CleanView learned this is fine")
             n_kept += 1
     added = []
     mine_muted = set(d["muted"])
@@ -548,18 +548,18 @@ def apply(key, dialogue, line_flags, scenes, mutes, label_learned="learned", on=
             m["keep"] = True
             m["hint"] = ("Claude said this was fine here before"
                          if _phrase(m) in d["claude_ok_words"] else
-                         "CleanView Play learned this is fine here")
+                         "CleanView learned this is fine here")
             n_w += 1
     n_you = sum(1 for l in added if l["learned_from"] == "you")
     if n_you:
         notes.append(f"Muted {n_you} line(s) you muted before in this show.")
     if len(added) - n_you:
-        notes.append(f"Muted {len(added) - n_you} line(s) CleanView Play has learned to mute in this "
+        notes.append(f"Muted {len(added) - n_you} line(s) CleanView has learned to mute in this "
                      "show.")
     if n_kept or n_sc or n_w:
         bits = [f"{n_kept} line(s)" if n_kept else "", f"{n_sc} scene(s)" if n_sc else "",
                 f"{n_w} word(s)" if n_w else ""]
-        notes.append("Left unticked because of what CleanView Play has learned: " +
+        notes.append("Left unticked because of what CleanView has learned: " +
                      ", ".join(b for b in bits if b) + ".")
     if n_again:
         notes.append(f"Ticked to cut again because you cut them before: {n_again} scene(s).")
@@ -647,7 +647,7 @@ def _line_at(dialogue, want, start=0):
 
 
 # what a taught scene is marked with, and what it was before 1.18.157 (the app's name then)
-TAUGHT_SCENE = "CleanView Play learned this scene"
+TAUGHT_SCENE = "CleanView learned this scene"
 TAUGHT_SCENE_OLD = "CleanView learned this scene"
 
 

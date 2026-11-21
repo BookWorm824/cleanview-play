@@ -39,7 +39,10 @@ APP_NAME = "CleanView Play"
 # What people read (1.18.157; the owner: "Yes, everywhere", so CleanView Play can be shown as
 # "CleanView"): the opening box, Task Manager and the shortcut say "CleanView Save". APP_NAME
 # stays: the folder, the .exe and the update seal (SEAL_FOR) go by it.
-SHOWN = APP_NAME                  # CleanView Play's (CleanView's is "CleanView Save")
+# CleanView Play is shown as "CleanView" (1.0.71; the owner, 2026-11-21: "wekk the shortcut and
+# anything people can read should change to cleanview also", "functtionally file wise it can be
+# clean view play", then "Everywhere readable"); CleanView itself shows "CleanView Save"
+SHOWN = "CleanView"
 OLD_SHORTCUT = APP_NAME + ".lnk"
 SHORTCUT = SHOWN + ".lnk"
 OWN_EXE = APP_NAME + ".exe"
@@ -439,7 +442,10 @@ def windows_of(pid=None, title=None):
             u.GetClassNameW(hwnd, cls, 64)
             text = ctypes.create_unicode_buffer(256)
             u.GetWindowTextW(hwnd, text, 256)
-            if cls.value == "TkTopLevel" and text.value.startswith(title):
+            rest = text.value[len(title):]
+            # its name, or its name and version: "CleanView 1.0.71", not "CleanView Save ..."
+            if cls.value == "TkTopLevel" and text.value.startswith(title) and (
+                    not rest or (rest[0] == " " and rest[1:2].isdigit())):
                 found.append(hwnd)
         return True
     u.EnumWindows(each(look), 0)
@@ -570,7 +576,8 @@ def splash(child, most=SPLASH_MOST):
              font=("Segoe UI", 14, "bold")).pack(padx=40, pady=(22, 4))
     # just updated from inside the program ("Update now"): say so while it opens again
     done = os.environ.get("CLEANVIEW_UPDATED", "")
-    said = tk.StringVar(value=done.replace(f"{APP_NAME} was updated", "Updated")
+    # (either name: an older copy's "Update now" says "CleanView Play was updated")
+    said = tk.StringVar(value="Updated" + done.split(" was updated", 1)[1]
                         if " was updated to version " in done else "This can take a few seconds.")
     tk.Label(root, textvariable=said, bg="#FFFFFF", fg="#6D6862",
              font=("Segoe UI", 10)).pack(padx=40)
@@ -887,10 +894,11 @@ NAME_PLACES = r"""@([Environment]::GetFolderPath('Desktop'),
 
 
 def name_shortcuts(here=None):
-    """This install's "CleanView" shortcuts on the desktop and in the Start menu become
-    "CleanView Play" (1.18.157; the owner: "Yes, everywhere", so CleanView Play can take the
-    name "CleanView"). Only a shortcut that starts this folder's launcher.pyw is renamed; if a
-    "CleanView Play" one is there already, the old one goes. Once; True when it was done."""
+    """This install's "CleanView Play" shortcuts on the desktop and in the Start menu become
+    "CleanView" (1.0.71). Only a shortcut that starts this folder's launcher.pyw is renamed, and
+    only where "CleanView.lnk" is free or is this install's own: where CleanView's own
+    "CleanView.lnk" is still there (CleanView 1.18.157 renames it "CleanView Save.lnk"), it's
+    left and tried again next time. True when every one was done."""
     import subprocess
     here = Path(here or HERE)
     if os.name != "nt" or SHORTCUT == OLD_SHORTCUT:
@@ -910,23 +918,29 @@ def name_shortcuts(here=None):
                   f"  if (Test-Path -LiteralPath $old) {{\n"
                   f"    $l = $ws.CreateShortcut($old)\n"
                   f"    if ($l.Arguments.Contains({q(here / 'launcher.pyw')})) {{\n"
-                  f"      $l.Description = {q(SHOWN)}; $l.Save()\n"
-                  f"      if (Test-Path -LiteralPath $new) {{ Remove-Item -LiteralPath $old }}\n"
-                  f"      else {{ Rename-Item -LiteralPath $old -NewName {q(SHORTCUT)} }}\n"
-                  f"      Write-Output $new }}\n"
+                  f"      if (Test-Path -LiteralPath $new) {{\n"
+                  f"        if ($ws.CreateShortcut($new).Arguments.Contains({q(here / 'launcher.pyw')})) {{\n"
+                  f"          Remove-Item -LiteralPath $old; Write-Output $new }}\n"
+                  f"        else {{ Write-Output 'WAIT' }} }}\n"       # another app's: not yet
+                  f"      else {{ $l.Description = {q(SHOWN)}; $l.Save()\n"
+                  f"        Rename-Item -LiteralPath $old -NewName {q(SHORTCUT)}; Write-Output $new }}\n"
+                  f"    }}\n"
                   f"  }}\n}}\n")
         r = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
                            capture_output=True, text=True, timeout=60, creationflags=0x08000000,
                            stdin=subprocess.DEVNULL)
         if r.returncode:
             raise RuntimeError(r.stderr.strip()[:300])
-        changed = [p.strip() for p in r.stdout.splitlines() if p.strip()]
+        said = [p.strip() for p in r.stdout.splitlines() if p.strip()]
+        changed = [p for p in said if p != "WAIT"]
         if changed:
             import ctypes
             sh = ctypes.windll.shell32
             for p in changed:
                 sh.SHChangeNotify(0x0002, 0x0005, ctypes.c_wchar_p(p), None)   # it's there
             sh.SHChangeNotify(0x08000000, 0, None, None)
+        if "WAIT" in said:
+            return False                # tried again next time
         APP_DATA.mkdir(parents=True, exist_ok=True)
         SHORTCUT_NAMED.write_text(SHOWN, encoding="utf8")
         return True

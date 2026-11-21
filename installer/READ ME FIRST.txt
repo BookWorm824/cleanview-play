@@ -1,4 +1,4 @@
-CleanView Play setup
+CleanView setup
 
 1. Right-click the zip and choose "Extract All", then open the extracted folder.
 2. Double-click "Install CleanView Play.bat".

@@ -649,7 +649,7 @@ def command(exe, list_path, paths, wid=None, pipe=None):
            "--hwdec=auto-copy",            # the graphics card decodes; filters still work
            "--sid=no",                     # no captions (as clean copies have none showing)
            "--ytdl=no", "--save-position-on-quit=no", "--cursor-autohide=1500",
-           "--msg-level=all=warn", "--title=${media-title} - CleanView Play"]
+           "--msg-level=all=warn", "--title=${media-title} - CleanView"]
     cmd.append(f"--wid={wid}" if wid is not None else "--autofit=85%")
     if pipe:
         cmd.append(f"--input-ipc-server={pipe}")

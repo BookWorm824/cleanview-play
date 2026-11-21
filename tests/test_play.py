@@ -375,7 +375,7 @@ class OnTheReviewPage(unittest.TestCase):
         self.assertEqual(wid, w.video.winfo_id(), "the player draws in the picture area")
         self.assertIs(w.winfo_toplevel(), w.win, "a window of its own")
         self.assertIs(w.win.master, self.app, "CleanView Play's own")
-        self.assertIn("Sample Show S01E01 - CleanView Play", w.win.title())
+        self.assertIn("Sample Show S01E01 - CleanView", w.win.title())
         w.close_window()                            # its X
         self.app.update()
         self.assertFalse(w.win.winfo_exists())
@@ -1256,16 +1256,19 @@ class OpeningBox(unittest.TestCase):
 
     def test_on_top_and_named_as_opening(self):
         seen = self.boxed({"CLEANVIEW_UPDATED": ""})
-        self.assertEqual(seen["title"], ["Opening CleanView Play"])
+        self.assertEqual(seen["title"], ["Opening CleanView"])
         self.assertEqual(seen["top"], [True])
         # since 1.18.128 the box's title and its "Please wait" line are text too
         self.assertIn("This can take a few seconds.", seen["said"])
-        self.assertIn("Opening CleanView Play…", seen["said"])
+        self.assertIn("Opening CleanView…", seen["said"])
 
     def test_says_it_was_just_updated(self):
-        seen = self.boxed({"CLEANVIEW_UPDATED": "CleanView Play was updated to version 9.9.9."})
+        seen = self.boxed({"CLEANVIEW_UPDATED": "CleanView was updated to version 9.9.9."})
         self.assertIn("Updated to version 9.9.9.", seen["said"])
         self.assertNotIn("This can take a few seconds.", seen["said"])
+        # an older copy's "Update now" still says "CleanView Play was updated" (1.0.71)
+        seen = self.boxed({"CLEANVIEW_UPDATED": "CleanView Play was updated to version 9.9.9."})
+        self.assertIn("Updated to version 9.9.9.", seen["said"])
 
     def test_says_its_updating_while_it_downloads(self):
         # 1.18.128: "Updating CleanView Play to 1.0.40... (5 of 23)"

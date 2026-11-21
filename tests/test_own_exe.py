@@ -62,7 +62,7 @@ class OwnExe(unittest.TestCase):
         exe = self.make()
         self.assertEqual(exe, self.folder / "CleanView Play.exe")
         for e in (exe, self.folder / "CleanView Play-work.exe"):
-            self.assertEqual(description(e), "CleanView Play")
+            self.assertEqual(description(e), "CleanView")      # shown as CleanView (1.0.71); the file stays
             self.assertEqual(icon_count(e), 1)
 
     def test_made_once(self):

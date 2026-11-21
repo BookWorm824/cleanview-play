@@ -39,16 +39,16 @@ class ShownName(unittest.TestCase):
             ui.App._check_update, ui.App._check_every_ai = self.saved
 
     def test_top_left_and_window(self):
-        self.assertEqual(ui.SHOWN_NAME, "CleanView Play")   # Play's own name
+        self.assertEqual(ui.SHOWN_NAME, "CleanView")   # Play is shown as "CleanView" (1.0.71)
         labels = [w.cget("text") for w in every(self.app) if isinstance(w, tk.Label)]
-        self.assertIn("CleanView Play", labels)
-        self.assertTrue(self.app.title().startswith("CleanView Play"))
+        self.assertIn("CleanView", labels)
+        self.assertTrue(self.app.title().startswith("CleanView"))
 
     def test_updates_still_cleanview(self):
         # the seal installed copies check goes by the launcher's name, which stays
         self.assertEqual(launcher.APP_NAME, "CleanView Play")   # Play's own seal
         # and the launcher still finds the open window by its title
-        self.assertTrue(self.app.title().startswith(launcher.APP_NAME))
+        self.assertTrue(self.app.title().startswith(launcher.SHOWN))   # how the launcher finds it
 
 
 if __name__ == "__main__":
