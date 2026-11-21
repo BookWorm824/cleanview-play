@@ -1272,7 +1272,7 @@ class OpeningBox(unittest.TestCase):
         lm = self.load()
         self.assertEqual(lm.APP_NAME, "CleanView Play")
         src = (support.ROOT / "launcher.pyw").read_text(encoding="utf8")
-        self.assertIn('opening(f"{UPDATING} {APP_NAME} to {ver}\\u2026 (0 of {len(names)})")', src)
+        self.assertIn('opening(f"{UPDATING} {SHOWN} to {ver}\\u2026 (0 of {len(names)})")', src)
 
 
 class FakeReg:

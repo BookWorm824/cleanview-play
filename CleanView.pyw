@@ -504,7 +504,7 @@ def _memory_note():
                 psapi.GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(p), p.size)):
             return ""
         gb = 1024 ** 3
-        return (f"Memory: CleanView uses {p.ws / gb:.1f} GB (at most {p.peak_ws / gb:.1f}); "
+        return (f"Memory: CleanView Play uses {p.ws / gb:.1f} GB (at most {p.peak_ws / gb:.1f}); "
                 f"the PC has {m.free / gb:.1f} of {m.total / gb:.1f} GB free.")
     except Exception:
         return ""
@@ -552,11 +552,12 @@ def her_fix(ex):
     return (no_room(ex) or isinstance(ex, PermissionError)
             or getattr(ex, "winerror", None) in (5, 32, 33)
             or str(ex).startswith(("The drive the clean copy goes to can't hold",
-                                   "CleanView wasn't allowed to write")))
+                                   "CleanView Play wasn't allowed to write",
+                                   "CleanView wasn't allowed to write")))   # (before 1.18.157)
 
 
 ICON = Path(__file__).resolve().parent / "cleanview.ico"
-NO_INTERNET_ASK = ("There's no internet connection, so CleanView can't look for subtitles "
+NO_INTERNET_ASK = ("There's no internet connection, so CleanView Play can't look for subtitles "
                    "online.\n\nVideos that have their own subtitles will still use them.\n\n"
                    "Clean without looking online?")
 UPDATED_SHOWN_SECS = 3      # how long "CleanView Play was updated to version ..." stays up
@@ -1136,8 +1137,8 @@ class App(tk.Tk):
                                             lambda: self._auto_update(ver))
 
     def _show_update_bar(self, ver):
-        said = (f"A new version of CleanView ({ver}) is ready. It updates by itself when "
-                "CleanView isn't busy.") if ver else "A new version of CleanView is ready."
+        said = (f"A new version of CleanView Play ({ver}) is ready. It updates by itself when "
+                "CleanView Play isn't busy.") if ver else "A new version of CleanView Play is ready."
         if self.upd_bar is not None and self.upd_bar.winfo_exists():
             self.upd_lbl.config(text=said)
             return
@@ -1236,8 +1237,8 @@ class App(tk.Tk):
         elif self.page_name == "working":
             chime()
             if not messagebox.askyesno(
-                    "CleanView is still working",
-                    "If you close CleanView now, this stops. Starting the same videos again "
+                    "CleanView Play is still working",
+                    "If you close CleanView Play now, this stops. Starting the same videos again "
                     "later skips the steps that are already done.\n\nClose anyway?",
                     icon="warning", default="no", parent=self):
                 return
@@ -1251,7 +1252,7 @@ class App(tk.Tk):
         """Say what went wrong in plain words; the details go in a file instead."""
         if details:
             save_details(details)
-        if messagebox.askyesno("CleanView ran into a problem",
+        if messagebox.askyesno("CleanView Play ran into a problem",
                                plain + ("\n\nThe details are saved in a file, for anyone helping "
                                         "you. Open that file now?" if details else ""),
                                icon="error", default="no", parent=self) and details:
@@ -1661,7 +1662,7 @@ class App(tk.Tk):
         self.size_link.pack(anchor="w", pady=X(3))
         look.link(extras, "Check for updates", lambda: self._check_update(manual=True),
                   icon="refresh", size=9, fg=MUTED, bold=False).pack(anchor="w", pady=X(3))
-        look.link(extras, "Send what CleanView learned…", self.share_learned, icon="send",
+        look.link(extras, "Send what CleanView Play learned…", self.share_learned, icon="send",
                   size=9, fg=MUTED, bold=False).pack(anchor="w", pady=X(3))
         # light or dark (1.18.78)
         self.theme_var = tk.StringVar(value=self.theme)
@@ -1800,7 +1801,7 @@ class App(tk.Tk):
         words.pack(side="left", fill="x", expand=True, padx=(0, X(12)))
         tk.Label(words, text="Language spoken in the video", bg=CARD, fg=INK, font=(HEAD, 10),
                  anchor="w").pack(anchor="w")
-        tk.Label(words, text="For another language CleanView uses that language's own word "
+        tk.Label(words, text="For another language CleanView Play uses that language's own word "
                  "lists. The first time, it gets a listening model for it (one time, about "
                  f"{engine.cvlang.MODEL_MB} MB). Not sure? Auto works it out from the video.",
                  bg=CARD, fg=MUTED, font=(FONT, 9),
@@ -1856,7 +1857,7 @@ class App(tk.Tk):
                        # have that oval light up the logo green to shows it on")
                        on=ACCENT, on_ink="#FFFFFF").pack(side="left")
         look.link(prow, "Reset to standard", self._profile_reset, size=9).pack(side="right")
-        tk.Label(p2, text="Each age remembers its own choices, and what CleanView learns from "
+        tk.Label(p2, text="Each age remembers its own choices, and what CleanView Play learns from "
                  "them is kept separately for each.", bg=BG, fg=MUTED, font=(FONT, 9),
                  wraplength=wrap_width(560), justify="left").pack(anchor="w", pady=(X(8), 0))
         tiles = tk.Frame(p2, bg=BG)
@@ -2208,7 +2209,7 @@ class App(tk.Tk):
         if not messagebox.askyesno(
                 "CleanView Play", "Send it in now?\n\nIt has the lines and words you and the AI "
                 "muted or kept, and its notes. No video or sound. Once it's added, every copy "
-                "of CleanView gets what it learned with an update.", parent=self):
+                "of CleanView Play gets what it learned with an update.", parent=self):
             self._send_by_hand(path)
             return
 
@@ -2232,8 +2233,8 @@ class App(tk.Tk):
         messagebox.showinfo(
             "CleanView Play",
             f"{first}Saved as \u201c{path.name}\u201d in {path.parent}.\n\n"
-            "Attach that file in your chat with Claude and ask for it to be added to CleanView. "
-            "Once it's added, every copy of CleanView (yours, and anyone you've shared it with) "
+            "Attach that file in your chat with Claude and ask for it to be added to CleanView Play. "
+            "Once it's added, every copy of CleanView Play (yours, and anyone you've shared it with) "
             "gets what it learned with the next update.\n\n"
             "It has the lines and words you and the AI muted or kept, and its notes. No video "
             "or sound.", parent=self)
@@ -2442,7 +2443,7 @@ class App(tk.Tk):
         who = getattr(self, "ai_who", {}).get(p) or "this account"
         chime()
         if not messagebox.askyesno(
-                "Sign out", f"Sign {who} out of {n} in CleanView?\n\nCleanView will go back to the "
+                "Sign out", f"Sign {who} out of {n} in CleanView Play?\n\nCleanView Play will go back to the "
                             f"{n} sign-in this PC had before, if there is one.", parent=self):
             return
         cc.sign_out(p)
@@ -3273,7 +3274,7 @@ class App(tk.Tk):
                         except OSError:
                             log = ""
                         why = (VQ.OUT_OF_MEMORY if VQ.memory_trouble(log) else
-                               "CleanView stopped working on this video unexpectedly.")
+                               "CleanView Play stopped working on this video unexpectedly.")
                         failed(k, f"{Path(j['video']).name}: {why}",
                                f"{j['video']}\n\nThe worker ended (code {msg['exit']}).\n\n{log}")
                     which()
@@ -3491,7 +3492,7 @@ class App(tk.Tk):
                 try:
                     self._handle(msg)
                 except Exception:      # one bad message must never stop the window updating
-                    self._problem("Something unexpected went wrong, but CleanView is still "
+                    self._problem("Something unexpected went wrong, but CleanView Play is still "
                                   "running.", traceback.format_exc())
         finally:
             if not getattr(self, "_gone", False):
@@ -3619,7 +3620,7 @@ class App(tk.Tk):
         save_details(details)
         chime()
         if not messagebox.askyesno(
-                "CleanView ran into a problem", text + "\n\nSend a note about what went "
+                "CleanView Play ran into a problem", text + "\n\nSend a note about what went "
                 "wrong, so it can be fixed? It has the video's name and the error. No video or "
                 "sound.", icon="error", parent=self):
             return
@@ -4753,7 +4754,7 @@ class App(tk.Tk):
         for note, everywhere in acts.get("remember", []):   # kept for later checks (the tester)
             if learn.add_note(st.get("show", "_movies"), note,
                               engine.title_name(st.get("path")), everywhere):
-                self._log("\u2713 CleanView will remember" +
+                self._log("\u2713 CleanView Play will remember" +
                           (" for everything you clean" if everywhere else "") + ": " + note,
                           "note")
         if not any(acts.get(k) for k in ("tick", "untick", "mute_lines", "mute_words",
@@ -5704,11 +5705,11 @@ class App(tk.Tk):
         help_card = look.Card(p, fill=NOTE, edge=NOTE_EDGE, radius=14, pad=(6, 6))
         help_card.pack(fill="x", pady=(self._px(22), 0))
         box = help_card.body
-        tk.Label(box, text="Help CleanView get better", bg=NOTE, fg=NOTE_INK,
+        tk.Label(box, text="Help CleanView Play get better", bg=NOTE, fg=NOTE_INK,
                  font=(FONT, 10, "bold"), padx=12, pady=(8)).pack(anchor="w")
         tk.Label(box, text="Send in what was refined on this one (what was found, what the AI "
                  "said, what you changed and what you kept). It's added to the knowledge every "
-                 "copy of CleanView starts with. No video or sound is in it.",
+                 "copy of CleanView Play starts with. No video or sound is in it.",
                  bg=NOTE, fg=INK, font=(FONT, 10), wraplength=wrap_width(700), justify="left",
                  padx=12).pack(anchor="w")
         ttk.Button(box, text="Send what we refined\u2026", style="Small.TButton",
