@@ -66,6 +66,19 @@ class PlayList(unittest.TestCase):
         want = engine._mute_filters(engine._merge(mute_rs + cut_rs), 0.0)
         self.assertEqual(cvplay.play_list(st)["af"], "lavfi=[" + ",".join(want) + "]")
 
+    def test_a_sound_only_scene_is_silenced_not_skipped(self):
+        # 1.18.154: "Mute the sound only" keeps the picture; 10 s, longer than a long silence,
+        # and still not skipped (render() mutes these after long_mutes)
+        scene = {"s": 60.0, "e": 70.0, "cut": True, "mute_only": True, "kind": ["violence"]}
+        e = cvplay.play_list(st_with(duration=300.0), cuts=[scene], lines=[], words=[], quiet=[])
+        self.assertEqual(e["skips"], [])
+        self.assertEqual(e["vf"], "")                               # the picture is kept
+        self.assertIn("between(t,60.000,70.000)", e["af"])          # the sound isn't
+        self.assertEqual(e["cut_seconds"], 0)
+        both = cvplay.play_list(st_with(duration=300.0), cuts=[scene, dict(scene, s=100.0, e=105.0,
+                                mute_only=False)], lines=[], words=[], quiet=[])
+        self.assertEqual(both["skips"], [[100.0, 105.0]])
+
     def test_her_ticks_win_over_the_defaults(self):
         st = support.sample_review()
         e = cvplay.play_list(st, cuts=[st["scenes"][1]], lines=[], words=[], quiet=[])

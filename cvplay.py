@@ -78,6 +78,9 @@ def play_list(st, cuts=None, lines=None, words=None, quiet=None):
     if quiet is None:
         quiet = [q for q in st.get("quiet", []) if q.get("lower", True)]
     end = dur if dur > 0 else float("inf")
+    # a scene set to "Mute the sound only" is silenced and its picture kept (1.18.154), as render()
+    sound_only = [c for c in cuts if c.get("mute_only")]
+    cuts = [c for c in cuts if not c.get("mute_only")]
     cut_rs = engine._merge((max(0.0, c["s"]), min(end, c["e"])) for c in cuts if c["e"] > c["s"])
     line_rs = engine._merge((l["s"], l["e"]) for l in lines)
     mute_rs = engine._merge([(m["s"], m["e"]) for m in words] + line_rs)
@@ -86,6 +89,11 @@ def play_list(st, cuts=None, lines=None, words=None, quiet=None):
     if long_rs:                     # skipped instead of a long silence, as render() cuts it
         mute_rs = [r for r in mute_rs if not any(a <= r[0] and r[1] <= b for a, b in long_rs)]
         cut_rs = engine._merge(list(cut_rs) + long_rs)
+    # muted after that, so their silence is never skipped instead
+    scene_mute_rs = engine._merge((max(0.0, c["s"]), min(end, c["e"]))
+                                  for c in sound_only if c["e"] > c["s"])
+    if scene_mute_rs:
+        mute_rs = engine._merge(list(mute_rs) + scene_mute_rs)
     quiet_rs = engine._merge((max(0.0, q["s"]), min(end, q["e"])) for q in quiet if q["e"] > q["s"])
     af = [f"volume=volume='{engine._quieter(c)}':eval=frame" for c in engine._chunks(quiet_rs)]
     # silent across the cuts too, so nothing of them is heard before the jump past them
