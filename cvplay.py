@@ -94,8 +94,13 @@ def play_list(st, cuts=None, lines=None, words=None, quiet=None):
                                   for c in sound_only if c["e"] > c["s"])
     if scene_mute_rs:
         mute_rs = engine._merge(list(mute_rs) + scene_mute_rs)
-    quiet_rs = engine._merge((max(0.0, q["s"]), min(end, q["e"])) for q in quiet if q["e"] > q["s"])
-    af = [f"volume=volume='{engine._quieter(c)}':eval=frame" for c in engine._chunks(quiet_rs)]
+    # each stretch of loud music down to its own level, as render() does (1.18.160: hard rock,
+    # metal and rap barely heard, other loud music to a quarter; no level is hard music)
+    af = []
+    for lvl in sorted({q.get("level", engine.HARD_MUSIC_LEVEL) for q in quiet}):
+        quiet_rs = engine._merge((max(0.0, q["s"]), min(end, q["e"])) for q in quiet
+                                 if q["e"] > q["s"] and q.get("level", engine.HARD_MUSIC_LEVEL) == lvl)
+        af += [f"volume=volume='{engine._quieter(c, lvl)}':eval=frame" for c in engine._chunks(quiet_rs)]
     # silent across the cuts too, so nothing of them is heard before the jump past them
     af += engine._mute_filters(engine._merge(mute_rs + cut_rs), 0.0)
     vf = [f"{BLACK}:enable='{engine._ranges(c, 0.0)}'" for c in engine._chunks(cut_rs)]

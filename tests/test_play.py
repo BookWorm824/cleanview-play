@@ -103,6 +103,16 @@ class PlayList(unittest.TestCase):
         self.assertIn(engine._quieter([(70.0, 80.0)]), e["af"])
         self.assertIn("eval=frame", e["af"])
 
+    def test_each_stretch_to_its_own_level(self):
+        # 1.18.160: hard rock, metal and rap barely heard; other loud music to a quarter
+        quiet = [{"s": 70.0, "e": 80.0, "lower": True, "level": engine.HARD_MUSIC_LEVEL},
+                 {"s": 120.0, "e": 130.0, "lower": True, "level": engine.OTHER_MUSIC_LEVEL},
+                 {"s": 150.0, "e": 155.0, "lower": True}]                   # no level: hard
+        e = cvplay.play_list(st_with(duration=300.0), cuts=[], lines=[], words=[], quiet=quiet)
+        self.assertIn(engine._quieter([(70.0, 80.0), (150.0, 155.0)], engine.HARD_MUSIC_LEVEL),
+                      e["af"])
+        self.assertIn(engine._quieter([(120.0, 130.0)], engine.OTHER_MUSIC_LEVEL), e["af"])
+
     def test_many_mutes_split_into_filters_of_fifty(self):
         words = [{"s": i * 2.0, "e": i * 2.0 + 0.3} for i in range(120)]
         e = cvplay.play_list(st_with(duration=300.0), cuts=[], lines=[], words=words, quiet=[])

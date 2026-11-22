@@ -56,7 +56,7 @@ CLOUD = ("claude", "chatgpt", "gemini")   # readers that use your Claude, ChatGP
 # candles and the two magic boxes are their own.
 HOLIDAYS = ("christmas", "halloween", "valentine", "easter", "stpatricks")
 MAGIC = ("darkmagic", "magic", "vampires")          # magic, and vampires and werewolves
-LINE_KINDS = ("sexref", "casual", "samesex", "oppsex", "crude", "bullying", "disrespect",
+LINE_KINDS = ("sexref", "casual", "samesex", "oppsex", "flirt", "crude", "bullying", "disrespect",
               "religion", "forensic") + HOLIDAYS + ("birthday",) + MAGIC
 # the lines between go too (fill_conversations). Not birthdays: only the candles count there.
 WHOLE_CONVERSATIONS = ("religion",) + HOLIDAYS + MAGIC
@@ -66,12 +66,14 @@ LIST_ONLY_KINDS = ("drugtalk",)
 DEFAULTS = {"nudity": True, "implied": False, "sex": True, "violence": True, "gore": True,
             "graphic": True, "disturbing": True, "medical": None,
             "kiss_os": "off", "kiss_ss": "off", "samesex": False, "casual": False,
-            "oppsex": False, "sexref": False, "immodest": False, "smoking": False,
+            "oppsex": False, "flirt": False, "sexref": False, "immodest": False, "smoking": False,
             "drinking": False, "drugs": False, "drugtalk": False, "crude": False,
             "bullying": False,
             "forensic": False,
             "disrespect": False,
-            "religion": False, "loudmusic": False, "christmas": False, "halloween": False,
+            "religion": False, "religion_preach": True, "religion_anger": True,
+            "religion_prayers": False,
+            "loudmusic": False, "christmas": False, "halloween": False,
             "birthday": False, "valentine": False, "easter": False, "stpatricks": False,
             "holidays": False, "darkmagic": False,
             "magic": False, "vampires": False, "gestures": False, "mywords": (), "ai": True,
@@ -92,12 +94,39 @@ def _lang_file(name):
 
 def full_opts(opts=None):
     o = dict(DEFAULTS)
-    o.update(opts or {})
+    o.update(old_religion(opts))
+    if o.get("religion") and not any(o.get("religion_" + p) for p in RELIGION_PARTS):
+        o["religion"] = False          # ticked with none of its parts: nothing to look for
     if o.get("holidays"):              # the one "Holidays" box: every holiday
         o.update(dict.fromkeys(HOLIDAYS, True))
     if o.get("medical") is None:       # settings from before the Medical box: as gore was
         o["medical"] = bool(o["gore"] or o["graphic"])
     return o
+
+
+# Religious content in parts, as CleanListen and CleanRead have it (1.18.159; the owner: "what
+# happened to the religious filter options?", "I told you to match the filters of CleanListen").
+# Preaching and anger at God are on when the box is ticked; prayers & verses is the old "all
+# religious conversations". A scan or settings from before the parts: religion ticked meant all
+# three (`religion_parts`, `old_religion`).
+RELIGION_PARTS = ("preach", "anger", "prayers")
+RELIGION_LABELS = {"preach": "Preaching", "anger": "Anger at God", "prayers": "Prayers & verses"}
+
+
+def old_religion(opts):
+    """Options from before the parts: "religion" ticked meant every part."""
+    o = dict(opts or {})
+    if o.get("religion") and not any("religion_" + p in o for p in RELIGION_PARTS):
+        o.update({"religion_" + p: True for p in RELIGION_PARTS})
+    return o
+
+
+def religion_parts(opts):
+    """The religion parts ticked (none when the box isn't)."""
+    o = full_opts(old_religion(opts))
+    if not o.get("religion"):
+        return set()
+    return {p for p in RELIGION_PARTS if o.get("religion_" + p)}
 
 
 def on_kinds(opts):
@@ -1580,9 +1609,10 @@ def load_tagger(threads=None):
 
 
 def sound_scan(path, info, tagger, progress=None, cancel=None):
-    """Probabilities of the tracked sounds in 3-second windows every 1.5 s.
-    Returns {"t": [...window starts], "p": [[...per TRACKED label]]}."""
-    ts, rows = [], []
+    """Probabilities of the tracked sounds in 3-second windows every 1.5 s, and each window's
+    loudness in dB (1.18.160, for "loud" music).
+    Returns {"t": [...window starts], "p": [[...per TRACKED label]], "db": [...]}."""
+    ts, rows, db = [], [], []
     for offset, seg, last in _stream_chunks(_audio_cmd(path, info, False), SOUND_WIN,
                                             SOUND_WIN - SOUND_HOP, cancel):
         if len(seg) < SR * 0.5:
@@ -1592,9 +1622,17 @@ def sound_scan(path, info, tagger, progress=None, cancel=None):
         got = {e.name: e.prob for e in tagger.compute(s, top_k=527)}
         ts.append(round(offset, 2))
         rows.append([round(float(got.get(k, 0.0)), 3) for k in TRACKED])
+        db.append(window_db(seg))
         if progress:
             progress(offset + len(seg) / SR)
-    return {"labels": TRACKED, "t": ts, "p": rows}
+    return {"labels": TRACKED, "t": ts, "p": rows, "db": db}
+
+
+def window_db(seg):
+    """How loud a stretch of sound is, in dB (0 the loudest)."""
+    import numpy as np
+    seg = np.asarray(seg, dtype=np.float32)
+    return round(float(20 * np.log10(np.sqrt(np.mean(seg * seg)) + 1e-9)), 1) if len(seg) else -99.0
 
 
 # ---------------------------------------------------------------------------
@@ -2091,24 +2129,76 @@ MUSIC_SHORTEST = 4.0   # shorter bits of music aren't worth turning down
 MUSIC_TAGS = re.compile(r"\b(rock|metal|punk|grunge|rap|hip[- ]?hop)\b", re.I)
 
 
+# Other loud music is turned down too (1.18.160; the owner: "its not catching all the rock and
+# rap music,...so I think it has a different opinion on what bad music is - so lets make rap and
+# hard rock muisc barely aduible, and the rest of the loud music 25% vilume"). Loud: within
+# LOUD_BELOW dB of the talking or louder (the median of windows that are clearly talk). On four
+# of her The Resident episodes music with nobody talking was about as loud as the talking (its
+# median 2 dB under to 2 dB over), so this is about three in four such windows; quieter music
+# under a scene is left alone. Needs the sound scan's loudness ("db"): without it only hard
+# music is found.
+LOUD_BELOW = 3.0
+TALK_SURE, TALK_MUSIC_MOST = 0.6, 0.3      # a window that's clearly talk, for the talking's level
+TALK_LEAST = 20                            # windows of clear talk needed to judge loudness
+
+
+def talking_level(snd):
+    """The talking's loudness in this video (dB), or None if it can't be told."""
+    db = (snd or {}).get("db")
+    if not db or len(db) != len(snd.get("p") or []):
+        return None
+    lab = snd["labels"]
+    if "Speech" not in lab or "Music" not in lab:
+        return None
+    sp, mu = lab.index("Speech"), lab.index("Music")
+    talk = sorted(d for d, r in zip(db, snd["p"]) if r[sp] >= TALK_SURE and r[mu] < TALK_MUSIC_MOST)
+    return talk[len(talk) // 2] if len(talk) >= TALK_LEAST else None
+
+
+def _music_pieces(music, talk, dur):
+    """(start, end, windows inside) of the music stretches with nobody talking."""
+    out = []
+    for s, e in _merge((a, b + 1.5) for a, b, _, _ in music):    # join music a moment apart
+        e = min(e - 1.5, dur)
+        inside = [x for x in music if x[0] < e and x[1] > s]
+        if sum(x[3] for x in inside) < MUSIC_WINDOWS:
+            continue                      # one or two windows: not sure enough
+        pieces, at = [], s
+        for a, b in _merge((a, b) for a, b in talk if b > s and a < e):
+            if a > at:
+                pieces.append((at, a))
+            at = max(at, b)
+        if at < e:
+            pieces.append((at, e))
+        out += [(a, b, inside) for a, b in pieces if b - a >= MUSIC_SHORTEST]
+    return out
+
+
 def loud_music(snd, asr, cues, dur):
-    """Stretches of hard rock, metal or rap music with nobody talking, to turn down:
-    [{"s", "e", "kind", "why", "lower": True}]. Talking is what the speech recognition
+    """Stretches of music with nobody talking, to turn down: hard rock, metal or rap to
+    barely heard (`HARD_MUSIC_LEVEL`), other loud music to a quarter (`OTHER_MUSIC_LEVEL`):
+    [{"s", "e", "kind", "why", "lower": True, "level"}]. Talking is what the speech recognition
     heard, except where the sound checker hears singing or hardly hears speech (that's
     the lyrics: in the Castle song the words came through with speech at 0.05-0.12), and
     subtitle lines that are said rather than sung (sung ones have a note sign). Subtitles
     that describe the music ("[heavy metal playing]") count as music too."""
     music, sung = [], []        # music: (start, end, "rock"/"rap", how many windows)
+    other = []                  # other loud music, the same way
+    level = talking_level(snd)
+    db = (snd or {}).get("db") or []
     if snd and snd.get("t") and all(k in snd["labels"] for k in MUSIC_SOUNDS):
         lab = snd["labels"]
         rock = [lab.index(k) for k in ROCK_SOUNDS]
         rap = [lab.index(k) for k in RAP_SOUNDS]
         sing = [lab.index(k) for k in LYRIC_SOUNDS]
         speech, mus = lab.index("Speech"), lab.index("Music")
-        for t, row in zip(snd["t"], snd["p"]):
+        for n, (t, row) in enumerate(zip(snd["t"], snd["p"])):
             r_, p_ = max(row[i] for i in rock), max(row[i] for i in rap)
             if (r_ >= ROCK_MIN or p_ >= RAP_MIN) and row[mus] >= MUSIC_SURE:
                 music.append((t, t + SOUND_WIN, "rap" if p_ >= RAP_MIN and p_ > r_ else "rock", 1))
+            elif (level is not None and row[mus] >= MUSIC_SURE and n < len(db) and
+                  db[n] >= level - LOUD_BELOW):
+                other.append((t, t + SOUND_WIN, "other", 1))
             sung.append((t, t + SOUND_WIN,
                          row[speech] < SPEECH_MIN or max(row[i] for i in sing) >= SPEECH_MIN))
     talk = []
@@ -2127,25 +2217,25 @@ def loud_music(snd, asr, cues, dur):
         if not (over and all(over)):
             talk.append((s - 0.4, e + 0.4))
     out = []
-    for s, e in _merge((a, b + 1.5) for a, b, _, _ in music):    # join music a moment apart
-        e = min(e - 1.5, dur)
-        inside = [x for x in music if x[0] < e and x[1] > s]
-        if sum(x[3] for x in inside) < MUSIC_WINDOWS:
-            continue                      # one or two windows: not sure enough
-        pieces, at = [], s
-        for a, b in _merge((a, b) for a, b in talk if b > s and a < e):
-            if a > at:
-                pieces.append((at, a))
-            at = max(at, b)
-        if at < e:
-            pieces.append((at, e))
-        rap_secs = sum(min(e, y) - max(s, x) for x, y, k, _ in inside if k == "rap")
-        all_secs = sum(min(e, y) - max(s, x) for x, y, _, _ in inside)
+    for a, b, inside in _music_pieces(music, talk, dur):
+        rap_secs = sum(min(b, y) - max(a, x) for x, y, k, _ in inside if k == "rap")
+        all_secs = sum(min(b, y) - max(a, x) for x, y, _, _ in inside)
         kind = "Rap music" if rap_secs > all_secs / 2 else "Rock or metal music"
-        for a, b in pieces:
-            if b - a >= MUSIC_SHORTEST:
-                out.append({"id": len(out) + 1, "s": round(a, 2), "e": round(b, 2), "kind": kind,
-                            "why": "loud " + kind.lower() + " with nobody talking", "lower": True})
+        out.append({"s": round(a, 2), "e": round(b, 2), "kind": kind,
+                    "why": "loud " + kind.lower() + " with nobody talking", "lower": True,
+                    "level": HARD_MUSIC_LEVEL})
+    hard = [(q["s"], q["e"]) for q in out]
+    for a, b, _ in _music_pieces(music + other, talk, dur):
+        at = a
+        for x, y in sorted(h for h in hard if h[1] > a and h[0] < b) + [(b, b)]:
+            if x - at >= MUSIC_SHORTEST:
+                out.append({"s": round(at, 2), "e": round(x, 2), "kind": "Loud music",
+                            "why": "loud music with nobody talking", "lower": True,
+                            "level": OTHER_MUSIC_LEVEL})
+            at = max(at, y)
+    out.sort(key=lambda q: q["s"])
+    for n, q in enumerate(out):
+        q["id"] = n + 1
     return out
 
 
@@ -2585,6 +2675,15 @@ LINE_WORDS = {   # only phrases that are hard to mistake
                            r"bapti[sz](e|ed|m)|church(es)?|synagogues?|mosques?|pastor|priests?|"
                            r"rabbis?|imams?|the lord|god bless|our father|holy spirit|"
                            r"born again|sunday school|bible study)\b", re.I),
+    # flirting (1.18.159, as CleanListen's): not "flirting with disaster / the idea", nor
+    # "check him out" (police talk)
+    "flirt": re.compile(r"\b(flirt(s|ed|ing)?(?! with (the |a )?(disaster|danger|death|idea|notion|"
+                        r"thought|bankruptcy|fame|trouble|madness|suicide|ruin|temptation|fate|"
+                        r"possibility)\b)|flirty|flirtatious(ly)?|flirtations?|coquettish(ly)?|"
+                        r"come-hither|pick-?up lines?|bedroom eyes|"
+                        r"hit(s|ting)? on (me|you|him|her|them|us)|"
+                        r"wink(s|ed|ing)? at (me|you|him|her|them|us)|"
+                        r"(make|makes|made|making) eyes at|play(s|ed|ing)? hard to get)\b", re.I),
     # not "elves", "stockings" or "make a wish": too often something else; not "Rudolph" alone
     # (a character "Rudolph Hill" in the owner's sentences), only the reindeer
     # not "Santa" in a place name or "Christmas Island" (the tester, That Thing You Do: "Santa
@@ -3010,10 +3109,46 @@ LINE_WORDS["drugtalk"] = Listed(re.compile(
 JOIN_NEXT_SECS = 2.0
 
 
-def list_hits(lines, kinds):
+# Anger at God, found by the list too (1.18.159, as CleanListen's NO_GOD_PHRASES and
+# blames_god, but only God's name right beside the blame: "Oh God, I'm so mad" is a swear)
+RELIGION_ANGER = re.compile(
+    r"\b(there is no god|there'?s no god|god is dead|god (doesn'?t|does not|don'?t) exist|"
+    r"no such thing as god|where was god|if there is a god|if there'?s a god|how could god|"
+    r"why would god|why did god|lost faith in god|g(ave|ive|iven) up on god|"
+    r"(lost|losing|lose) (my|her|his|their|your|our) faith(?! in (?!(god|the lord|jesus)\b))|"
+    r"(don'?t|doesn'?t|do not|does not|never|didn'?t) believe in god|"
+    r"(hate|hates|hated|blame|blames|blamed|blaming|curse|curses|cursed|cursing) "
+    r"(god|the lord|jesus|heaven)|"
+    r"god (has )?(abandoned|forsaken|forsook) (me|us|you|him|her|them)|god doesn'?t care|"
+    r"god (hates|hated) (me|us|you|him|her|them))\b", re.I)
+
+
+def religion_words(opts):
+    """The list for the religion parts ticked: prayers & verses the prayer and church words,
+    anger at God its phrases; preaching is left to the readers. None when neither is ticked."""
+    parts = religion_parts(opts)
+    pats = ([LINE_WORDS["religion"].pattern] if "prayers" in parts else []) + (
+        [RELIGION_ANGER.pattern] if "anger" in parts else [])
+    return re.compile("|".join(f"(?:{p})" for p in pats), re.I) if pats else None
+
+
+def line_words(opts):
+    """LINE_WORDS with religion's list for the parts ticked (none: left out)."""
+    d = dict(LINE_WORDS)
+    r = religion_words(opts)
+    if r is None:
+        d.pop("religion", None)
+    else:
+        d["religion"] = r
+    return d
+
+
+def list_hits(lines, kinds, words=None):
     """{line number: {kind: [the words found in that line]}} by the short phrase lists. A find
     that starts in one line and runs into the next is found too, and each line gets its part
     of it (a find starting in the next line is that line's own)."""
+    words = LINE_WORDS if words is None else words
+    kinds = [k for k in kinds if k in words]
     out = {}
     for i, l in enumerate(lines):
         t = l["text"]
@@ -3023,7 +3158,7 @@ def list_hits(lines, kinds):
         text = t + " " + nxt["text"] if join else t
         cut = len(t)
         for k in kinds:
-            for m in LINE_WORDS[k].finditer(text):
+            for m in words[k].finditer(text):
                 if m.start() >= cut:
                     continue                    # the next line's own: found there
                 if m.end() <= cut:
@@ -3036,6 +3171,7 @@ def list_hits(lines, kinds):
                     out.setdefault(i + 1, {}).setdefault(k, []).append(rest)
     return out
 LINE_LABEL = {"crude": "Crude humor", "bullying": "Bullying", "religion": "Religious talk",
+              "flirt": "Flirting",
               "disrespect": "Disrespect",
               "christmas": "Christmas", "halloween": "Halloween", "birthday": "Birthday candles",
               "valentine": "Valentine's Day", "easter": "Easter", "darkmagic": "Dark magic",
@@ -3150,6 +3286,8 @@ OPT_TEXT = {"graphic": "graphic violence (blood and wounds shown, bloody bodies)
             "religion": "all religious conversations: talk about God, faith, prayer, church, the "
                         "Bible, heaven, or any religion's beliefs and practices, including "
                         "sincere prayer (God's name said as a swear is a separate choice)",
+            "flirt": "flirting, between anyone: someone flirting with, hitting on, winking at, "
+                     "sweet-talking or making eyes at someone, pick-up lines",
             "christmas": "Christmas, in talk or on screen: Santa, Christmas trees, decorations, "
                          "presents, carols, the holiday itself, Advent, and the nativity story "
                          "or a nativity play (Bethlehem, the manger, Mary and Joseph, baby "
@@ -3193,8 +3331,60 @@ def sound_cues(cues, limit=150):
     return "\n".join(out[:limit])
 
 
+# What the readers are told religious content is, for the parts ticked (1.18.159). All three:
+# what it always was ("all religious conversations"); otherwise as CleanListen's religion_def.
+RELIGION_PART_TEXT = {
+    "preach": "someone explaining, preaching, teaching or debating religious beliefs of any faith "
+              "(a sermon, scripture quoted as part of it, statements of belief or testimony "
+              "such as 'there is a God, and He listens')",
+    "anger": "someone angry with, blaming, mocking, hating or denying God, doubting whether God "
+             "exists or cares, or losing their faith",
+    "prayers": "a prayer, a Bible verse or hymn, thanking or praising God, a blessing, or other "
+               "sincere talk about God, faith, church or heaven",
+}
+RELIGION_OFF_TEXT = {
+    "preach": "explaining, preaching or debating beliefs is NOT this",
+    "anger": "doubting, being angry with or denying God is NOT this",
+    "prayers": "praying, a short prayer, saying grace, thanking God, a Bible verse said in "
+               "passing, believing in God, going to church, or a priest or pastor in the story "
+               "is NOT this",
+}
+RELIGION_NOT = ("God's or Jesus' name said as a swear or exclamation ('thank God', 'dear God', "
+                "'oh, hallelujah', 'go to hell'), idioms ('a match made in heaven', 'get to the "
+                "church on time'), 'bless you' after a sneeze, a passing 'God bless you' or "
+                "'Merry Christmas', or a character's name is NOT this either. Any religion "
+                "counts, including voodoo or Vodun rituals")
+_RELIGION_ALL = None
+
+
+def religion_text(parts):
+    """The definition of religious content for these parts (None: all three, as before)."""
+    parts = set(parts)
+    if not parts or parts >= set(RELIGION_PARTS):
+        return None
+    on = "; or ".join(RELIGION_PART_TEXT[p] for p in RELIGION_PARTS if p in parts)
+    off = "; ".join(RELIGION_OFF_TEXT[p] for p in RELIGION_PARTS if p not in parts)
+    return f"religious content, only these kinds: {on}. Not: {off}. {RELIGION_NOT}"
+
+
+def use_religion(opts):
+    """Tell every reader (the AI on this PC, Claude/ChatGPT/Gemini, the final review and the
+    chat) what religious content is for the parts ticked in opts."""
+    global _RELIGION_ALL
+    if _RELIGION_ALL is None:
+        _RELIGION_ALL = (OPT_TEXT["religion"], ai.LINE_TYPES["religion"],
+                         cc.TYPE_TEXT["religion"])
+    t = religion_text(religion_parts(opts))
+    if t is None:
+        OPT_TEXT["religion"], ai.LINE_TYPES["religion"], cc.TYPE_TEXT["religion"] = _RELIGION_ALL
+    else:
+        OPT_TEXT["religion"] = ai.LINE_TYPES["religion"] = t
+        cc.TYPE_TEXT["religion"] = t + "; the whole conversation, not just the line that names it"
+
+
 def wanted_text(o, groups):
     o = full_opts(o)
+    use_religion(o)
     out = [GROUP_TEXT[g] for g in groups if g in GROUP_TEXT]
     if my_words(o):
         out.append("these words and phrases from their own list: " +
@@ -3752,8 +3942,9 @@ def add_new_lessons(st, reused=False):
                                                     l.get("text")) for l in line_mutes}
     fo = full_opts(o)
     added = []
+    use_religion(fo)
     found = list_hits(lines, [k for k in LINE_KINDS + LIST_ONLY_KINDS
-                              if fo.get(k) and k in LINE_WORDS])
+                              if fo.get(k) and k in LINE_WORDS], line_words(fo))
     for i, l in enumerate(lines):
         if i in taken or (round(l["s"], 2), l["text"]) in taken:
             continue
@@ -4819,6 +5010,7 @@ def find_lines(lines, o, have_ai, progress=None, cancel=None, genders=None, clau
     """unread: (first, end) line numbers of parts Claude couldn't read: the AI on this PC
     reads just those (the word lists always read everything). people: who's a man and who's
     a woman ({name: "man"}), told to the AI on this PC beside the lines it reads."""
+    use_religion(o)
     wanted = [k for k in LINE_KINDS if o[k]]
     by_list = wanted + [k for k in LIST_ONLY_KINDS if o.get(k)]     # (no AI reads these)
     if not by_list or not lines:
@@ -4867,7 +5059,7 @@ def find_lines(lines, o, have_ai, progress=None, cancel=None, genders=None, clau
             except Exception:
                 pass
     listed = {}                 # found only by the word list: {line: {kind: [the words]}}
-    for i, kinds_found in list_hits(lines, by_list).items():
+    for i, kinds_found in list_hits(lines, by_list, line_words(o)).items():
         for k, hits in kinds_found.items():
             if k not in found.get(i, set()):
                 listed.setdefault(i, {})[k] = hits
@@ -5327,6 +5519,7 @@ def analyze(path, workdir, groups=("swearing", "mild", "deity"), opts=None, prog
     closer look made its checks time out and be done again (16 minutes instead of 12); the
     picture scan during the listening was no faster (25 s slower)."""
     o = full_opts(opts)
+    use_religion(o)                     # what religious content is, for the parts ticked
     auto = o.get("language") == cvlang.AUTO        # (English until it's worked out, below)
     lang = cl.use_language(o.get("language"))      # English, or another one's word lists
     for k_old, k_new in (("find_nudity", "nudity"), ("find_sex", "sex"), ("find_violence", "violence")):
@@ -5425,8 +5618,10 @@ def analyze(path, workdir, groups=("swearing", "mild", "deity"), opts=None, prog
     if nd["sound"]:
         if sfile.exists():
             snd = json.loads(sfile.read_text())
-            if o["loudmusic"] and not all(k in snd.get("labels", []) for k in MUSIC_SOUNDS):
-                snd = None           # saved before CleanView listened for music: again
+            if o["loudmusic"] and (not all(k in snd.get("labels", []) for k in MUSIC_SOUNDS)
+                                   or "db" not in snd):
+                snd = None           # saved before CleanView listened for music, or before
+                                     # it measured how loud (1.18.160): again
             elif (o.get("violence") and
                   not all(k in snd.get("labels", []) for k in LOOK_ALIKE_SOUNDS)):
                 snd = None           # saved before it told doors and typewriters from gunfire
@@ -6005,9 +6200,11 @@ def analyze(path, workdir, groups=("swearing", "mild", "deity"), opts=None, prog
 
     quiet = loud_music(snd, asr, cues, dur) if o["loudmusic"] else []
     if o["loudmusic"]:
-        notes.append(f"Loud music: {len(quiet)} stretch(es) of hard rock, metal or rap with "
-                     "nobody talking will be turned down." if quiet else
-                     "Loud music: no hard rock, metal or rap with nobody talking was found.")
+        hard_n = sum(1 for q in quiet if q.get("level") != OTHER_MUSIC_LEVEL)
+        notes.append(f"Loud music: {hard_n} stretch(es) of hard rock, metal or rap with nobody "
+                     f"talking will be turned down until barely heard, and "
+                     f"{len(quiet) - hard_n} of other loud music to a quarter." if quiet else
+                     "Loud music: no loud music with nobody talking was found.")
     st = {"path": path, "info": info, "groups": list(groups), "mutes": mutes, "scenes": scenes,
           "lines": line_mutes, "cues": cues, "show": key, "quiet": quiet,
           "dialogue": [{"s": round(l["s"], 2), "e": round(l["e"], 2), "text": l["text"],
@@ -6234,7 +6431,12 @@ def _remove(path):
 # Turned-down music plays at a tenth of its volume (20 dB quieter). It was a quarter (12 dB)
 # until 1.18.99 (the owner, 2026-11-14: "on the reducing loud music - that needs to come down
 # more").
-MUSIC_LEVEL = 0.1
+# 1.18.160 (the owner: "lets make rap and hard rock muisc barely aduible, and the rest of the
+# loud music 25% vilume"): hard rock, metal and rap barely heard (30 dB quieter), other loud
+# music a quarter (12 dB). A stretch found before has no "level": it was hard music.
+HARD_MUSIC_LEVEL = 0.03
+OTHER_MUSIC_LEVEL = 0.25
+MUSIC_LEVEL = HARD_MUSIC_LEVEL
 
 
 def _quieter(rs, level=MUSIC_LEVEL, ramp=0.5):
@@ -6599,9 +6801,11 @@ def render(workdir, outdir, cuts=None, progress=None, log=print, cancel=None, en
 
     a = info["audio"]
     afilt = ["aresample"]   # copes with files whose speaker layout changes mid-stream
-    quiet_rs = _merge((max(0.0, q["s"]), min(dur, q["e"])) for q in quiet if q["e"] > q["s"])
-    for chunk in _chunks(quiet_rs):   # (they don't overlap, so one after another is the same)
-        afilt.append(f"volume=volume='{_quieter(chunk)}':eval=frame")
+    for lvl in sorted({q.get("level", HARD_MUSIC_LEVEL) for q in quiet}):
+        quiet_rs = _merge((max(0.0, q["s"]), min(dur, q["e"])) for q in quiet
+                          if q["e"] > q["s"] and q.get("level", HARD_MUSIC_LEVEL) == lvl)
+        for chunk in _chunks(quiet_rs):  # (they don't overlap, so one after another is the same)
+            afilt.append(f"volume=volume='{_quieter(chunk, lvl)}':eval=frame")
     afilt += _mute_filters(mute_rs, off)
     if cut_rs:
         afilt += _cut_filters(cut_rs, off)
@@ -6821,7 +7025,9 @@ def render(workdir, outdir, cuts=None, progress=None, log=print, cancel=None, en
     events += [(l["s"], "muted line  (" + ", ".join(LINE_LABEL.get(t, t) for t in l["types"]) + ")")
                for l in lines]
     events += [(q["s"], f"turned down  {q.get('kind', 'loud music').lower()} for "
-                        f"{q['e'] - q['s']:.0f} seconds") for q in quiet]
+                        f"{q['e'] - q['s']:.0f} seconds" +
+                        ("  (to a quarter)" if q.get("level") == OTHER_MUSIC_LEVEL else
+                         "  (barely heard)")) for q in quiet]
     events += [(c["s"], f"CUT {c['e'] - c['s']:.0f} seconds  "
                         f"{' + '.join(plain_ai(k) for k in c.get('kind') or ['scene'])}"
                         f"  ({c.get('why', '')})") for c in cuts]
