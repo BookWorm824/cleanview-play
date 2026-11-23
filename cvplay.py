@@ -65,7 +65,7 @@ class Moved(PlayError, FileNotFoundError):
     """The video isn't where it was when it was checked."""
 
 
-def play_list(st, cuts=None, lines=None, words=None, quiet=None):
+def play_list(st, cuts=None, lines=None, words=None, quiet=None, blurs=None):
     """What to do while this video plays: {"skips": [[s, e]...], "af": ..., "vf": ...,
     "mutes": n, "long": n}. Same choices and defaults as `engine.render`."""
     dur = st.get("duration") or 0
@@ -77,6 +77,8 @@ def play_list(st, cuts=None, lines=None, words=None, quiet=None):
         words = st.get("mutes", [])
     if quiet is None:
         quiet = [q for q in st.get("quiet", []) if q.get("lower", True)]
+    if blurs is None:              # bad words written on screen, blurred (1.18.165)
+        blurs = [b for b in st.get("blurs", []) if b.get("blur", True)]
     end = dur if dur > 0 else float("inf")
     # a scene set to "Mute the sound only" is silenced and its picture kept (1.18.154), as render()
     sound_only = [c for c in cuts if c.get("mute_only")]
@@ -103,7 +105,12 @@ def play_list(st, cuts=None, lines=None, words=None, quiet=None):
         af += [f"volume=volume='{engine._quieter(c, lvl)}':eval=frame" for c in engine._chunks(quiet_rs)]
     # silent across the cuts too, so nothing of them is heard before the jump past them
     af += engine._mute_filters(engine._merge(mute_rs + cut_rs), 0.0)
-    vf = [f"{BLACK}:enable='{engine._ranges(c, 0.0)}'" for c in engine._chunks(cut_rs)]
+    # each word written on screen blurred while it's there, as render() does (1.18.165); on
+    # the file's own clock, as the black over the cuts
+    v = (st.get("info") or {}).get("video") or {}
+    size = (v.get("width") or 0, v.get("height") or 0)
+    vf = engine._blur_filters(blurs, size) if blurs and all(size) else []
+    vf += [f"{BLACK}:enable='{engine._ranges(c, 0.0)}'" for c in engine._chunks(cut_rs)]
     return {"skips": [[round(s, 3), round(e, 3)] for s, e in cut_rs],
             "af": _lavfi(af), "vf": _lavfi(vf),
             "mutes": len(mute_rs), "long": len(long_rs),
@@ -142,9 +149,9 @@ def _lavfi(filters):
     return f"lavfi=[{','.join(filters)}]" if filters else ""
 
 
-def entry(st, cuts=None, lines=None, words=None, quiet=None):
+def entry(st, cuts=None, lines=None, words=None, quiet=None, blurs=None):
     """One video's part of the list the player reads."""
-    e = play_list(st, cuts, lines, words, quiet)
+    e = play_list(st, cuts, lines, words, quiet, blurs)
     audio = (st.get("info") or {}).get("audio") or {}
     e.update({"path": str(st["path"]), "title": Path(st["path"]).stem,
               "audio_index": audio.get("index"), "duration": st.get("duration") or 0})
@@ -536,7 +543,8 @@ def clean_entry(st):
     return entry(st, cuts=[c for c in st.get("scenes", []) if c.get("cut")],
                  lines=[l for l in st.get("lines", []) if l.get("mute")],
                  words=[m for m in st.get("mutes", []) if not m.get("keep")],
-                 quiet=[q for q in st.get("quiet", []) if q.get("lower", True)])
+                 quiet=[q for q in st.get("quiet", []) if q.get("lower", True)],
+                 blurs=[b for b in st.get("blurs", []) if b.get("blur", True)])
 
 
 def write_list(entries, folder=None):

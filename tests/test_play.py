@@ -97,6 +97,19 @@ class PlayList(unittest.TestCase):
         self.assertEqual(e["skips"], [[50.0, 56.5]])
         self.assertEqual(e["long"], 1)
 
+    def test_words_on_screen_blurred_while_there(self):
+        # 1.18.165: a bad word written in the picture is blurred, as render() does it
+        sign = {"s": 40.0, "e": 44.5, "x": 100, "y": 60, "w": 120, "h": 30, "blur": True}
+        left = dict(sign, s=50.0, e=52.0, blur=False)               # unticked on the review page
+        e = cvplay.play_list(st_with(blurs=[sign, left]), cuts=[], lines=[], words=[], quiet=[])
+        self.assertIn("delogo=x=100:y=60:w=120:h=30:enable='between(t,40.000,44.500)'", e["vf"])
+        self.assertNotIn("50.000", e["vf"])
+        self.assertEqual(e["skips"], [])                            # the picture plays on
+        # what the review page passes (only the ticked ones), and the clean entry the same
+        mine = cvplay.play_list(st_with(), cuts=[], lines=[], words=[], quiet=[], blurs=[sign])
+        self.assertIn("delogo=x=100", mine["vf"])
+        self.assertIn("delogo=x=100", cvplay.clean_entry(st_with(blurs=[sign, left]))["vf"])
+
     def test_loud_music_turned_down(self):
         st = st_with(quiet=[{"s": 70.0, "e": 80.0, "lower": True}])
         e = cvplay.play_list(st, cuts=[], lines=[], words=[])
